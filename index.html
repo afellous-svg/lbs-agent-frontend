@@ -897,11 +897,21 @@ async function lancerProspectionIA() {
   document.getElementById('ia-results').innerHTML = '';
 
   try {
+    // Détection du service de chasse adapté au métier (compta / paie / commercial / etc.)
+    try {
+      const det = await apiFetch('/prospection/detect-service?metier=' + encodeURIComponent(metier));
+      const dj = await det.json();
+      window.__iaServicePreset = dj.service_preset || null;
+      window.__iaServiceLabel = dj.label || 'responsable métier';
+    } catch {}
+
     const r = await apiFetch('/prospection/companies-from-cv', {
       method: 'POST',
       body: JSON.stringify({ metier, lieu, limit_per_tier: 40 }),
     });
     const data = await r.json();
+    data.metier = metier;
+    data.lieu = lieu;
     document.getElementById('ia-loading').classList.add('hidden');
     renderProspectionResults(data);
   } catch (e) {
@@ -913,6 +923,10 @@ async function lancerProspectionIA() {
 function renderProspectionResults(data) {
   const container = document.getElementById('ia-results');
   window.__iaResultsData = data;
+  // Maj du libellé du bouton "Tout enrichir" selon le service détecté
+  const btn = document.getElementById('ia-btn-enrich-smart');
+  const label = window.__iaServiceLabel || 'responsable métier';
+  if (btn) btn.textContent = `⚡ Tout enrichir (DRH + ${label})`;
 
   const totalCompanies = data.tiers.reduce((s, t) => s + (t.companies?.length || 0), 0);
 
@@ -923,11 +937,10 @@ function renderProspectionResults(data) {
         <div style="font-size:12px;color:var(--muted);">${data.metier} · ${data.lieu || 'France'} · NAF: ${(data.naf_codes_detectes||[]).join(', ')||'aucun'} · Dépt: ${data.departement_detecte||'?'}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-purple btn-sm" onclick="ia_enrichAll('drh')" title="Cherche DRH/RRH gratuitement via Google + déduit pattern email">⚡ Tout enrichir (DRH gratuit)</button>
-        <button class="btn btn-purple btn-sm" onclick="ia_enrichAll('compta')" title="Cherche DAF/Resp Compta">⚡ Tout enrichir (Compta)</button>
+        <button class="btn btn-purple btn-sm" onclick="ia_enrichAllSmart()" id="ia-btn-enrich-smart" title="Cherche DRH + responsable de service du métier ciblé, gratuitement via Google">⚡ Tout enrichir (DRH + responsable métier)</button>
         <button class="btn btn-warn btn-sm" onclick="ia_genererEmailing()" title="Génère un mailing avec tous les contacts enrichis">✉️ Générer emailing</button>
-        <button class="btn btn-purple btn-sm" onclick="ia_exportCsv()">📥 Exporter CSV</button>
-        <button class="btn btn-primary btn-sm" onclick="ia_creerVivier()">🎯 Créer vivier MultiveRH</button>
+        <button class="btn btn-primary btn-sm" onclick="ia_importMultiveRH()" title="Crée les fiches sociétés + contacts dans MultiveRH">🏥 Importer dans MultiveRH</button>
+        <button class="btn btn-purple btn-sm" onclick="ia_exportCsv()">📥 CSV</button>
       </div>
     </div>
   </div>`;
@@ -964,9 +977,7 @@ function renderProspectionResults(data) {
             </div>` : ''}
           </div>` : ''}
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompany(${ti}, ${ci}, 'drh')">⚡ DRH</button>
-            <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompany(${ti}, ${ci}, 'compta')">⚡ Compta</button>
-            <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompany(${ti}, ${ci}, 'direction')">⚡ Direction</button>
+            <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompanySmart(${ti}, ${ci})">⚡ Enrichir (DRH + ${window.__iaServiceLabel || 'responsable métier'})</button>
           </div>
           <div id="enrich-${cid}" style="margin-top:6px;"></div>
         </div>`;
@@ -1335,7 +1346,204 @@ function ia_emailingOpenInMailto() {
   window.location.href = url;
 }
 
-// ── Enrichit TOUTES les sociétés affichées (batch, sequential) ──
+// ── Enrichissement intelligent : DRH + responsable de service détecté depuis le métier ──
+async function ia_enrichCompanySmart(tierIdx, cIdx) {
+  const data = window.__iaResultsData;
+  if (!data) return;
+  const company = data.tiers[tierIdx]?.companies?.[cIdx];
+  if (!company) return;
+  const cid = company.__cardId || `card-${tierIdx}-${cIdx}`;
+  const target = document.getElementById(`enrich-${cid}`);
+  if (!target) return;
+
+  // Détecte le service à chasser
+  const servicePreset = window.__iaServicePreset; // déjà détecté côté backend
+  const roles = ['drh'];
+  if (servicePreset && servicePreset !== 'drh') roles.push(servicePreset);
+
+  target.innerHTML = `<div style="padding:6px;color:var(--muted);font-style:italic;">⏳ Recherche ${roles.join(' + ')}…</div>`;
+
+  try {
+    company.__enrich = company.__enrich || {};
+    // Lance les recherches en séquence
+    for (const role of roles) {
+      const r = await apiFetch('/prospection/enrich-cascade', {
+        method: 'POST',
+        body: JSON.stringify({
+          company: {
+            name: company.name,
+            website: company.website || '',
+            siret: company.siret || '',
+          },
+          role,
+        }),
+      });
+      const result = await r.json();
+      company.__enrich[role] = result;
+    }
+    renderEnrichResultSmart(target, company, tierIdx, cIdx, roles);
+  } catch (e) {
+    target.innerHTML = `<div style="color:#c00;font-size:11px;">❌ ${e.message}</div>`;
+  }
+}
+
+function renderEnrichResultSmart(target, company, tierIdx, cIdx, roles) {
+  let html = '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;">';
+  for (const role of roles) {
+    const result = company.__enrich[role];
+    if (!result) continue;
+    const people = result.people || [];
+    const emails = result.emails_generated || [];
+    const contacts = emails.length ? emails : people;
+    const roleLabel = role === 'drh' ? '👤 RH/DRH' :
+                      role === 'compta' ? '🧮 Compta' :
+                      role === 'paie' ? '💰 Paie' :
+                      role === 'commercial' ? '💼 Commercial' :
+                      role === 'it' ? '💻 IT' :
+                      role === 'marketing' ? '📣 Marketing' :
+                      role === 'medical' ? '⚕️ Médical' :
+                      role === 'sante' ? '🏥 Santé' :
+                      '🎯 ' + role;
+    html += `<div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--brand);">${roleLabel} — ${contacts.length} trouvé(s)
+        ${result.pattern ? `<span style="color:#2a8a72;font-weight:400;font-size:10px;">via ${result.pattern_source}</span>` : ''}
+      </div>`;
+    if (contacts.length === 0) {
+      html += `<div style="font-size:11px;color:var(--muted);font-style:italic;">Aucun contact trouvé</div>`;
+    } else {
+      for (let i = 0; i < Math.min(contacts.length, 5); i++) {
+        const p = contacts[i];
+        html += `<div style="background:#fff;border:1px solid #e8efed;border-radius:6px;padding:4px 6px;margin-bottom:2px;font-size:11px;">
+          <strong>${p.first_name} ${p.last_name}</strong>
+          ${p.title ? `<span style="color:var(--muted);font-size:10px;"> · ${p.title}</span>` : ''}
+          ${p.linkedin ? `<a href="${p.linkedin}" target="_blank" style="font-size:10px;margin-left:4px;">LI</a>` : ''}
+          ${p.email ? `<div style="color:#2a8a72;font-size:10px;">✉️ ${p.email}</div>` : ''}
+        </div>`;
+      }
+      if (result.lusha_needed) {
+        html += `<button class="btn btn-warn btn-sm" style="padding:2px 6px;font-size:10px;margin-top:3px;" onclick="ia_lushaFinalize(${tierIdx},${cIdx},'${role}')">💰 1 crédit Lusha</button>`;
+      }
+    }
+    html += '</div>';
+  }
+  html += `<div style="margin-top:6px;display:flex;gap:6px;">
+    <button class="btn btn-primary btn-sm" style="padding:3px 8px;font-size:10px;" onclick="ia_importOneToMultiveRH(${tierIdx}, ${cIdx})">🏥 Importer cette société</button>
+  </div></div>`;
+  target.innerHTML = html;
+}
+
+// ── Auto-import société + contacts d'UNE société dans MultiveRH ──
+async function ia_importOneToMultiveRH(tierIdx, cIdx) {
+  const data = window.__iaResultsData;
+  const c = data.tiers[tierIdx].companies[cIdx];
+  if (!c?.__enrich) { alert('Enrichis d\'abord cette société'); return; }
+  const payload = ia_buildImportPayload([c], null);
+  if (!confirm(`Importer ${c.name} (${payload.companies[0].contacts.length} contacts) dans MultiveRH ?`)) return;
+  await ia_pushImport(payload, 'Société importée');
+}
+
+// ── Auto-import TOUTES les sociétés affichées dans MultiveRH ──
+async function ia_importMultiveRH() {
+  const data = window.__iaResultsData;
+  if (!data) { alert('Aucune prospection chargée'); return; }
+  const all = [];
+  for (const tier of data.tiers) for (const c of (tier.companies || [])) if (c.__enrich) all.push(c);
+  if (!all.length) { alert('Lance d\'abord l\'enrichissement sur les sociétés'); return; }
+
+  const groupName = prompt('Nom du vivier (laisse vide pour ne pas créer de vivier) :',
+    `Prospection ${data.metier} - ${data.lieu || 'France'} - ${new Date().toLocaleDateString('fr-FR')}`);
+  // null si annulé, '' si vide
+  if (groupName === null) return;
+
+  const payload = ia_buildImportPayload(all, groupName || null);
+  await ia_pushImport(payload, `${all.length} société(s) importée(s)`);
+}
+
+// Construit le payload import depuis les sociétés enrichies
+function ia_buildImportPayload(companies, groupName) {
+  return {
+    group_name: groupName || null,
+    companies: companies.map(c => {
+      const contacts = [];
+      for (const role of Object.keys(c.__enrich || {})) {
+        const enrich = c.__enrich[role];
+        const pool = enrich.emails_generated?.length ? enrich.emails_generated : enrich.people || [];
+        for (const p of pool) {
+          contacts.push({
+            first_name: p.first_name,
+            last_name: p.last_name,
+            title: p.title || role,
+            email: p.email || null,
+            phone: p.phone || null,
+            linkedin: p.linkedin || null,
+            source: 'prospection_ia_' + role,
+          });
+        }
+      }
+      return {
+        name: c.name,
+        siret: c.siret || null,
+        website: c.website || null,
+        city: c.city || c.ville || null,
+        zipcode: c.zipcode || null,
+        naf: c.naf || null,
+        contacts,
+      };
+    }),
+  };
+}
+
+async function ia_pushImport(payload, successMsg) {
+  try {
+    const r = await apiFetch('/prospection/import-to-multiverh', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const out = await r.json();
+    if (out.ok) {
+      const s = out.stats || {};
+      let msg = `✅ ${successMsg}\n\n${s.companies_created || 0} sociétés créées · ${s.companies_existing || 0} existantes\n${s.contacts_created || 0} contacts créés · ${s.contacts_existing || 0} déjà connus`;
+      if (out.group_url) msg += `\n\nVivier : ${out.group_url}`;
+      alert(msg);
+      if (out.group_url) {
+        const baseHost = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
+          ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
+        window.open(`https://${baseHost}${out.group_url}`, '_blank');
+      }
+    } else {
+      alert('❌ ' + (out.error || 'erreur'));
+    }
+  } catch (e) {
+    alert('❌ ' + e.message);
+  }
+}
+
+// ── Enrichit TOUTES les sociétés affichées (smart : DRH + responsable métier) ──
+async function ia_enrichAllSmart() {
+  const data = window.__iaResultsData;
+  if (!data) return;
+  const all = [];
+  for (let ti = 0; ti < data.tiers.length; ti++) {
+    for (let ci = 0; ci < (data.tiers[ti].companies || []).length; ci++) {
+      all.push([ti, ci]);
+    }
+  }
+  if (!all.length) return;
+  const serviceLabel = window.__iaServiceLabel || 'responsable métier';
+  if (!confirm(`Enrichir ${all.length} sociétés avec DRH + ${serviceLabel} ?\n\n100% gratuit (Google). ~${Math.ceil(all.length * 16 / 60)} min.`)) return;
+  const btn = document.getElementById('ia-btn-enrich-smart');
+  if (btn) { btn.disabled = true; }
+  for (let i = 0; i < all.length; i++) {
+    const [ti, ci] = all[i];
+    if (btn) btn.textContent = `⏳ ${i+1}/${all.length}…`;
+    await ia_enrichCompanySmart(ti, ci);
+    await new Promise(r => setTimeout(r, 500));
+  }
+  if (btn) { btn.disabled = false; btn.textContent = `⚡ Tout enrichir (DRH + ${serviceLabel})`; }
+  alert(`✅ Enrichissement terminé sur ${all.length} sociétés`);
+}
+
+// ── Enrichit TOUTES les sociétés affichées (batch, sequential) — version legacy 1 rôle ──
 async function ia_enrichAll(role) {
   const data = window.__iaResultsData;
   if (!data) return;
