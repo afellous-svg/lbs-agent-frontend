@@ -210,6 +210,11 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
               <button class="btn btn-sm" onclick="rechercherFranceTravail()" style="background:#0747a6;color:#fff;">🇫🇷 France Travail</button>
               <button class="btn btn-sm" onclick="lancerPhantombuster()" style="background:#7C3AED;color:#fff;">👻 Phantombuster</button>
             </div>
+            <div class="label" style="margin-top:18px;margin-bottom:8px;">🎯 Chasse candidats passifs</div>
+            <div class="flex" style="flex-wrap:wrap;gap:6px;">
+              <button class="btn btn-sm btn-warn" onclick="fp_chasserCandidats()" title="LinkedIn + Google → candidats en poste + leurs emails pro déduits gratuitement">🎯 Chasser candidats en poste + Emailing</button>
+            </div>
+            <div id="fp-chasse-results" style="margin-top:12px;"></div>
             <div class="flex mt16" style="justify-content:flex-end;">
               <button class="btn btn-sm" onclick="resetFP()" style="background:#f0f4f2;border:none;">↺ Recommencer</button>
             </div>
@@ -1845,6 +1850,180 @@ function resetFP() {
   document.getElementById('fp-criteres').classList.add('hidden');
   document.getElementById('fp-results').innerHTML = '';
   document.getElementById('fp-sources').classList.add('hidden');
+  const chasse = document.getElementById('fp-chasse-results');
+  if (chasse) chasse.innerHTML = '';
+}
+
+// ── CHASSE candidats passifs : LinkedIn + Google → emails pro ──
+async function fp_chasserCandidats() {
+  if (!fpParsed) return alert('Analyse d\'abord la fiche de poste');
+  const metier = fpParsed.metier || fpParsed.poste || '';
+  const lieu = fpParsed.lieu || fpParsed.localisation || '';
+  if (!metier) return alert('Aucun métier détecté dans la fiche');
+
+  const target = document.getElementById('fp-chasse-results');
+  target.innerHTML = `<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:14px;font-size:13px;color:#9a3412;">
+    ⏳ Recherche candidats <strong>${metier}</strong> sur <strong>${lieu || 'France'}</strong>… (Google + LinkedIn, ~30 sec)
+  </div>`;
+
+  try {
+    const r = await apiFetch('/prospection/find-candidates-from-job', {
+      method: 'POST',
+      body: JSON.stringify({ metier, lieu, max: 25 }),
+    });
+    const data = await r.json();
+    window.__fpChasseData = data;
+    fp_renderChasseResults(data);
+  } catch (e) {
+    target.innerHTML = `<div style="color:#c00;">❌ ${e.message}</div>`;
+  }
+}
+
+function fp_renderChasseResults(data) {
+  const target = document.getElementById('fp-chasse-results');
+  const candidates = data.candidates || [];
+  const withEmail = candidates.filter(c => c.email);
+  const noEmail = candidates.filter(c => !c.email);
+
+  let html = `<div class="card" style="margin-top:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+      <div>
+        <div style="font-weight:800;font-size:15px;color:var(--brand);">${candidates.length} candidat(s) en poste trouvés</div>
+        <div style="font-size:12px;color:var(--muted);">${withEmail.length} avec email · ${noEmail.length} sans email (société introuvable)</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-warn btn-sm" onclick="fp_genererEmailingChasse()" ${withEmail.length===0?'disabled':''}>✉️ Générer emailing avec fiche de poste</button>
+        <button class="btn btn-purple btn-sm" onclick="fp_exportCandidatsCsv()">📥 Exporter CSV</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;">`;
+
+  for (const c of candidates) {
+    const emailHtml = c.email
+      ? `<div style="color:#2a8a72;font-size:11px;margin-top:3px;">✉️ ${c.email}</div>`
+      : `<div style="color:#a87;font-size:11px;margin-top:3px;">— pas d'email (${c.email_source})</div>`;
+    html += `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong style="color:var(--navy);">${c.first_name} ${c.last_name}</strong>
+        ${c.linkedin ? `<a href="${c.linkedin}" target="_blank" style="font-size:11px;">LI</a>` : ''}
+      </div>
+      <div style="color:var(--muted);font-size:11px;margin-top:2px;">${c.company || '?'}</div>
+      ${emailHtml}
+    </div>`;
+  }
+  html += `</div></div>`;
+  target.innerHTML = html;
+}
+
+// Export CSV des candidats chassés
+function fp_exportCandidatsCsv() {
+  const data = window.__fpChasseData;
+  if (!data) return;
+  const rows = [['prenom','nom','societe','linkedin','email','email_source','domain']];
+  for (const c of data.candidates || []) {
+    rows.push([c.first_name||'', c.last_name||'', c.company||'', c.linkedin||'', c.email||'', c.email_source||'', c.domain||'']);
+  }
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `chasse-${fpParsed?.metier||'candidats'}-${Date.now()}.csv`.replace(/\s+/g,'_');
+  a.click();
+}
+
+// Génère emailing aux candidats chassés (avec fiche de poste attachée)
+function fp_genererEmailingChasse() {
+  const data = window.__fpChasseData;
+  if (!data) return;
+  const candidates = (data.candidates || []).filter(c => c.email);
+  if (!candidates.length) return alert('Aucun candidat avec email');
+
+  const recipients = candidates.map(c => ({
+    email: c.email,
+    first_name: c.first_name,
+    last_name: c.last_name,
+    title: fpParsed?.metier || '',
+    company: c.company,
+    tier: '-',
+    role: 'candidat',
+    email_source: c.email_source,
+  }));
+
+  // Dédup
+  const dedup = new Map();
+  for (const r of recipients) if (!dedup.has(r.email)) dedup.set(r.email, r);
+  const uniqueRecipients = Array.from(dedup.values());
+
+  // Réutilise la modale emailing avec un template "approche candidat"
+  ia_openEmailingModalChasse(uniqueRecipients);
+}
+
+function ia_openEmailingModalChasse(recipients) {
+  const metier = fpParsed?.metier || fpParsed?.poste || 'le poste';
+  const lieu = fpParsed?.lieu || fpParsed?.localisation || '';
+  const contrat = fpParsed?.contrat || 'CDI';
+
+  const defaultSubject = `Opportunité ${metier}${lieu ? ' à ' + lieu : ''}`;
+  const defaultBody = `Bonjour {prenom},
+
+Je me permets de vous contacter dans le cadre d'une recherche pour un poste de **${metier}**${lieu ? ' sur ' + lieu : ''} en ${contrat}.
+
+Votre profil chez {societe} a retenu mon attention et je pense que cette opportunité pourrait correspondre à vos aspirations.
+
+Vous trouverez la fiche de poste détaillée ci-jointe. Je reste à votre disposition pour échanger sur le poste et les conditions.
+
+Bien à vous,
+
+Tarik Afellous
+Le Bon Soignant — Cabinet de recrutement médical
+contact@lebonsoignant.fr`;
+
+  const existing = document.getElementById('emailing-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'emailing-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;max-width:880px;width:100%;max-height:90vh;overflow:auto;padding:22px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:18px;font-weight:800;color:var(--brand);">🎯 Emailing chasse — ${recipients.length} candidat(s)</div>
+        <button onclick="document.getElementById('emailing-modal').remove()" style="background:#f5f5f5;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;">✕</button>
+      </div>
+
+      <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#9a3412;">
+        📌 La fiche de poste (PDF) sera <strong>jointe automatiquement</strong> à chaque email.
+        Variables : <code>{prenom}</code> <code>{nom}</code> <code>{societe}</code>
+      </div>
+
+      <div class="label">Objet</div>
+      <input type="text" id="email-subject" value="${defaultSubject.replace(/"/g,'&quot;')}" style="width:100%;margin-bottom:12px;">
+
+      <div class="label">Message</div>
+      <textarea id="email-body" style="width:100%;min-height:240px;font-family:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:6px;">${defaultBody}</textarea>
+
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer;color:var(--brand);font-weight:600;">📋 Voir les ${recipients.length} candidats</summary>
+        <div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:6px;font-size:11px;">
+          ${recipients.map(r => `<div style="padding:4px 6px;border-bottom:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div><strong>${r.first_name} ${r.last_name}</strong></div>
+            <div style="color:#2a8a72;">${r.email}</div>
+            <div style="color:var(--muted);">${r.company}</div>
+          </div>`).join('')}
+        </div>
+      </details>
+
+      <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
+        <button class="btn btn-purple" onclick="ia_emailingDownloadCsv()">📥 Exporter CSV destinataires</button>
+        <button class="btn btn-primary" onclick="ia_emailingSendViaMultiveRH()">📤 Envoyer via MultiveRH (avec fiche jointe)</button>
+        <button class="btn" style="background:#f5f5f5;color:#666;" onclick="ia_emailingOpenInMailto()">✉️ Ouvrir dans client mail</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  window.__iaEmailingRecipients = recipients;
+  // Marque qu'on doit attacher la fiche de poste
+  window.__iaEmailingAttachment = { type: 'fiche_poste', filename: 'fiche-poste.pdf', data: fpFileData };
 }
 
 // ══ RECHERCHE ══
