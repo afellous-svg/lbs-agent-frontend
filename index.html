@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🏥 Le Bon Soignant — Agent IA</title>
+<script>
+  // Anti-flash : masque l'overlay de login dès le chargement si un SSO ou un token existe
+  (function(){
+    try{
+      var hasSso = /(?:[?&])sso_email=/.test(window.location.search);
+      var hasToken = !!localStorage.getItem('lbs_token');
+      if (hasSso || hasToken) {
+        document.documentElement.classList.add('lbs-sso-pending');
+      }
+    }catch(e){}
+  })();
+</script>
+<style>
+  html.lbs-sso-pending #login-overlay{display:none !important;}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --brand:#58A693;
+  --brand-dark:#3F8A78;
+  --brand-light:#E8F4F0;
+  --brand-tint:#58A69318;
+  --gold:#D6AE4F;
+  --gold-tint:#D6AE4F22;
+  --navy:#182D4D;
+  --bg:#F5F7F6;
+  --border:#E2E8E5;
+  --muted:#7B8A87;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Mulish','Arial',sans-serif;background:var(--bg);min-height:100vh;color:var(--navy);}
+.header{background:var(--brand);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);}
+.header h1{color:#fff;font-size:18px;font-weight:800;letter-spacing:0.3px;}
+.header small{color:rgba(255,255,255,0.78);font-size:11px;display:block;font-weight:500;}
+.pill{background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;font-weight:700;margin-left:8px;}
+.tabs{background:#fff;border-bottom:1px solid var(--border);display:flex;overflow-x:auto;}
+.tab{padding:14px 20px;border:none;background:none;cursor:pointer;font-weight:700;font-size:13px;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;font-family:inherit;transition:all 0.15s;}
+.tab:hover{color:var(--navy);}
+.tab.active{color:var(--brand);border-bottom-color:var(--brand);}
+.body{max-width:1280px;margin:0 auto;padding:24px 20px;}
+.card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 1px 3px rgba(24,45,77,0.06),0 2px 12px rgba(24,45,77,0.04);margin-bottom:18px;border:1px solid var(--border);}
+.label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+input,textarea,select{width:100%;padding:11px 15px;border-radius:8px;border:1.5px solid var(--border);font-size:14px;outline:none;font-family:inherit;background:#fff;box-sizing:border-box;color:var(--navy);transition:border-color 0.15s;}
+input:focus,textarea:focus,select:focus{border-color:var(--brand);}
+textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif;font-size:13px;line-height:1.5;}
+.btn{padding:11px 20px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;transition:all 0.15s;letter-spacing:0.2px;}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(24,45,77,0.12);}
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-primary:hover{background:var(--brand-dark);}
+.btn-purple{background:var(--gold);color:#fff;}
+.btn-purple:hover{background:#C09635;}
+.btn-red{background:#C0191B;color:#fff;}
+.btn-ghost{background:transparent;border:1.5px solid var(--brand);color:var(--brand);}
+.btn-sm{padding:6px 14px;font-size:12px;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;}
+.flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;}
+.alert-row{display:flex;justify-content:space-between;align-items:center;}
+.alert-red{background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;}
+.alert-green{background:var(--brand-light);border:1px solid var(--brand);color:var(--brand-dark);}
+.alert-purple{background:var(--gold-tint);border:1px solid var(--gold);color:#8A6F1E;}
+.alert-yellow{background:#FFF8E1;border:1px solid #FFE0B2;color:#7A5000;}
+.tag{background:var(--brand-tint);color:var(--brand-dark);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;}
+.badge{border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;color:#fff;}
+.score-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:4px;}
+.score-fill{height:100%;border-radius:3px;}
+.cand-card{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;}
+.cand-card.selected{background:var(--brand-light);border-color:var(--brand);}
+.cand-card:hover{border-color:var(--brand);box-shadow:0 2px 8px rgba(88,166,147,0.15);}
+.examples{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.ex-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--gold);background:var(--gold-tint);color:#8A6F1E;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.ex-btn:hover{background:var(--gold);color:#fff;}
+.ops{display:flex;gap:4px;margin-top:6px;}
+.op-btn{padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;font-family:monospace;}
+.mail-box{background:var(--brand-light);border:1px solid var(--brand);border-radius:8px;padding:14px;font-size:13px;line-height:1.9;color:var(--navy);white-space:pre-wrap;margin-top:10px;font-family:Georgia,serif;}
+.sent-badge{background:var(--brand-light);color:var(--brand-dark);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;}
+.urg{background:#FFF0E4;color:#C84000;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;}
+.chk{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all 0.15s;}
+.chk.on{background:var(--brand);border-color:var(--brand);color:#fff;}
+.spinner{display:inline-block;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.hidden{display:none !important;}
+.mt8{margin-top:8px;} .mb8{margin-bottom:8px;} .mt16{margin-top:16px;} .mb16{margin-bottom:16px;}
+/* ── Login overlay ── */
+#login-overlay{position:fixed;inset:0;background:var(--brand);display:flex;align-items:center;justify-content:center;z-index:1000;}
+.login-box{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(24,45,77,0.25);border-top:4px solid var(--gold);}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-logo h2{font-size:22px;font-weight:800;color:var(--brand);margin-top:8px;letter-spacing:0.5px;}
+.login-logo small{color:var(--muted);font-size:13px;font-weight:500;}
+/* ── Vivier cards ── */
+.vivier-card{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;}
+.vivier-card:hover{border-color:var(--brand);background:var(--brand-light);}
+/* ── PB leads ── */
+.lead-card{background:#fafafa;border:1px solid #e8e8e8;border-radius:10px;padding:12px;margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <div style="font-size:48px;">🏥</div>
+      <h2>Le Bon Soignant</h2>
+      <small>Agent IA · Sourcing & Prospection</small>
+    </div>
+    <div class="label">Email</div>
+    <input type="email" id="login-email" placeholder="votre@email.com" style="margin-bottom:12px;" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div class="label">Mot de passe</div>
+    <input type="password" id="login-password" placeholder="••••••••" style="margin-bottom:20px;" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div id="login-error" class="alert alert-red hidden" style="margin-bottom:12px;"></div>
+    <button class="btn btn-primary" style="width:100%;padding:14px;" onclick="doLogin()" id="login-btn">Se connecter →</button>
+    <div style="text-align:center;margin-top:16px;font-size:12px;color:#aaa;">Le Bon Soignant — Accès réservé aux collaborateurs</div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app" class="hidden">
+  <div class="header">
+    <div>
+      <h1>🏥 LE BON SOIGNANT</h1>
+      <small>Agent IA · Sourcing & Prospection</small>
+    </div>
+    <div class="flex">
+      <span class="pill">310 437 candidats</span>
+      <span class="pill" id="pill-user">👤 —</span>
+      <span class="pill" id="pill-services">⚙️ Chargement…</span>
+      <button onclick="doLogout()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showMainTab('recherche')">🔍 Recherche</button>
+    <button class="tab" onclick="showMainTab('prospection')">📬 Prospection</button>
+    <button class="tab" id="tab-admin-btn" onclick="showTab('admin')" style="display:none;">⚙️ Admin</button>
+  </div>
+
+  <div class="body">
+    <div id="error-box" class="alert alert-red hidden alert-row">
+      <span id="error-msg"></span>
+      <button onclick="hideError()" style="background:none;border:none;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+
+    <!-- ══ ONGLET PRINCIPAL : RECHERCHE ══ -->
+    <div id="tab-recherche">
+      <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);">
+        <button class="sub-tab active" onclick="showSubTab('recherche','fiche')" id="sub-recherche-fiche">📋 Par fiche de poste</button>
+        <button class="sub-tab" onclick="showSubTab('recherche','search')" id="sub-recherche-search">🔎 Recherche classique</button>
+      </div>
+      <style>
+        .sub-tab{padding:8px 16px;border:none;background:none;cursor:pointer;font-weight:700;font-size:13px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;font-family:inherit;}
+        .sub-tab:hover{color:var(--navy);}
+        .sub-tab.active{color:var(--brand);border-bottom-color:var(--brand);}
+      </style>
+
+    <!-- ══ FICHE DE POSTE ══ -->
+    <div id="tab-fiche">
+      <!-- Conteneur 2 colonnes : PDF à gauche, critères à droite -->
+      <div id="fp-split" style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:flex-start;">
+        <!-- Colonne gauche : zone fiche / PDF -->
+        <div class="card" style="min-width:0;">
+          <div style="background:#f5f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#5b21b6;">
+            📋 <strong>Sourcing par fiche de poste</strong>
+          </div>
+          <div class="flex mb16">
+            <button class="btn btn-purple btn-sm" id="fp-mode-paste-btn" onclick="setFpMode('paste')">📝 Coller</button>
+            <label for="fp-file-input" class="btn btn-sm" id="fp-mode-file-btn" onclick="setFpMode('file')" style="background:#f0f4f2;border:none;cursor:pointer;">📎 PDF</label>
+            <input type="file" id="fp-file-input" accept=".pdf,.txt" style="display:none;" onchange="handleFpFile(this)"/>
+          </div>
+          <div id="fp-paste-zone">
+            <div class="label">Collez votre fiche de poste</div>
+            <textarea id="fp-text" rows="16" placeholder="Poste : Infirmière de nuit — EHPAD&#10;Lieu : Paris 14e&#10;Contrat : CDI&#10;Expérience : minimum 2 ans…"></textarea>
+          </div>
+          <div id="fp-file-zone" class="hidden">
+            <div style="border:2px dashed #c4b5fd;border-radius:12px;padding:10px 14px;background:#f9f7ff;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <div style="font-weight:700;color:#7C3AED;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="fp-file-label">Aucun fichier sélectionné</div>
+              <button class="btn btn-purple btn-sm" onclick="analyserFiche()" style="flex-shrink:0;">🤖 Analyser et rechercher →</button>
+            </div>
+            <div id="fp-pdf-preview" class="hidden" style="margin-top:12px;border:1px solid #c4b5fd;border-radius:12px;overflow:hidden;">
+              <embed id="fp-pdf-frame" type="application/pdf" style="width:100%;height:700px;border:none;"/>
+            </div>
+          </div>
+          <div id="fp-paste-action" class="flex mt16" style="justify-content:flex-end;">
+            <button class="btn btn-purple" onclick="analyserFiche()">🤖 Analyser et rechercher →</button>
+          </div>
+        </div>
+
+        <!-- Colonne droite : critères + boutons sources -->
+        <div id="fp-criteres" class="hidden" style="min-width:0;position:sticky;top:14px;">
+          <div class="card" style="border:1px solid #c4b5fd;background:#f9f7ff;">
+            <div style="font-weight:700;color:#7C3AED;margin-bottom:10px;">✅ Critères extraits</div>
+            <div id="fp-criteres-content" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+            <div class="label" style="margin-top:18px;margin-bottom:8px;">🔎 Lancer recherche sur</div>
+            <div class="flex" style="flex-wrap:wrap;gap:6px;">
+              <button class="btn btn-sm btn-purple" onclick="rechercherCandidatsFP()" title="Tes candidats MultiveRH">🏥 MultiveRH</button>
+              <button class="btn btn-sm" onclick="rechercherHelloWork()" style="background:#FF5A1F;color:#fff;" title="HelloWork via ton agent Mac">🌐 HelloWork</button>
+              <button class="btn btn-sm" onclick="rechercherApec()" style="background:#0E3A77;color:#fff;">🟦 APEC</button>
+              <button class="btn btn-sm" onclick="rechercherFranceTravail()" style="background:#0747a6;color:#fff;">🇫🇷 France Travail</button>
+              <button class="btn btn-sm" onclick="lancerPhantombuster()" style="background:#7C3AED;color:#fff;">👻 Phantombuster</button>
+            </div>
+            <div class="flex mt16" style="justify-content:flex-end;">
+              <button class="btn btn-sm" onclick="resetFP()" style="background:#f0f4f2;border:none;">↺ Recommencer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="fp-loading" class="hidden" style="text-align:center;padding:40px;">
+        <div class="spinner" style="font-size:36px;">📋</div>
+        <div style="font-weight:700;color:#7C3AED;margin-top:10px;">Analyse en cours…</div>
+        <div style="font-size:13px;color:#aaa;margin-top:6px;" id="fp-status">Extraction des critères…</div>
+      </div>
+      <div id="fp-search-loading" class="hidden" style="text-align:center;padding:40px;">
+        <div class="spinner" style="font-size:36px;">🔍</div>
+        <div style="font-weight:700;color:#7C3AED;margin-top:10px;">Recherche dans 310 437 candidats…</div>
+      </div>
+      <div id="fp-sources" class="hidden flex mb16"></div>
+      <div id="fp-results"></div>
+    </div>
+
+    <!-- ══ RECHERCHE CLASSIQUE (sous-onglet) ══ -->
+    <div id="tab-search" class="hidden">
+      <div class="card">
+        <div class="label">Recherche booléenne — MultiveRH + Clay/LinkedIn</div>
+        <div style="font-size:12px;color:#888;margin-bottom:10px;">Utilisez <strong>AND</strong>, <strong>OR</strong>, <strong>NOT</strong> et les <strong>"guillemets"</strong></div>
+        <div class="examples">
+          <button class="ex-btn" onclick="setQuery('\"infirmière\" AND EHPAD')">IDE EHPAD</button>
+          <button class="ex-btn" onclick="setQuery('\"aide-soignant\" AND (nuit OR \"soins palliatifs\")')">AS nuit</button>
+          <button class="ex-btn" onclick="setQuery('\"médecin coordonnateur\" AND EHPAD')">Médecin coord.</button>
+          <button class="ex-btn" onclick="setQuery('IBODE OR \"bloc opératoire\" NOT \"faisant fonction\"')">IBODE confirmé</button>
+          <button class="ex-btn" onclick="setQuery('\"infirmière urgences\" OR SMUR OR SAMU')">Urgences</button>
+          <button class="ex-btn" onclick="setQuery('\"médecin du travail\" AND (\"Île-de-France\" OR Paris)')">Médecin travail</button>
+        </div>
+        <textarea id="query-input" placeholder='Ex: "infirmière" AND (EHPAD OR "maison de retraite") NOT "faisant fonction"' rows="3" oninput="updateQuery()"></textarea>
+        <div class="ops mt8">
+          <button class="op-btn" onclick="addOp('AND')" style="border:1px solid #1a7a5e;color:#1a7a5e;background:#fff;">AND</button>
+          <button class="op-btn" onclick="addOp('OR')" style="border:1px solid #f0a500;color:#f0a500;background:#fff;">OR</button>
+          <button class="op-btn" onclick="addOp('NOT')" style="border:1px solid #e05a5a;color:#e05a5a;background:#fff;">NOT</button>
+          <button class="op-btn" onclick="addOp('()')" style="border:1px solid #888;color:#888;background:#fff;">( )</button>
+        </div>
+        <div class="row mt16">
+          <div style="flex:1 1 180px;">
+            <div class="label">📍 Zone géographique *</div>
+            <input type="text" id="lieu-input" placeholder="Paris, Lyon, Île-de-France…" oninput="updateQuery()"/>
+          </div>
+          <div style="flex:1 1 180px;">
+            <div class="label">📏 Rayon — <span id="rayon-val" style="color:#1a7a5e;font-weight:700;">30 km</span></div>
+            <input type="range" id="rayon-input" min="0" max="100" value="30" step="5"
+              oninput="document.getElementById('rayon-val').textContent=this.value==0?'Ville exacte':this.value+' km';updateQuery()"
+              style="width:100%;accent-color:#1a7a5e;margin-top:4px;"/>
+          </div>
+          <div style="flex:1 1 130px;">
+            <div class="label">📄 Contrat</div>
+            <select id="contrat-input" onchange="updateQuery()">
+              <option value="">Tous</option>
+              <option>CDI</option><option>CDD</option>
+              <option>Intérim</option><option>Vacation</option><option>Libéral</option>
+            </select>
+          </div>
+          <div style="flex:1 1 130px;">
+            <div class="label">⏱ Disponibilité</div>
+            <select id="dispo-input" onchange="updateQuery()">
+              <option value="">Toutes</option>
+              <option>Immédiate</option>
+              <option>Sous 15 jours</option>
+              <option>Sous 1 mois</option>
+            </select>
+          </div>
+        </div>
+        <div id="query-preview" class="alert alert-purple hidden mt16"></div>
+        <div class="flex mt16" style="justify-content:space-between;">
+          <button class="btn btn-sm" onclick="clearSearch()" style="background:#f0f4f2;border:none;">🗑 Effacer</button>
+          <button class="btn btn-purple" onclick="runSearch()">🔍 Lancer la recherche →</button>
+        </div>
+      </div>
+      <div id="search-loading" class="hidden" style="text-align:center;padding:40px;">
+        <div class="spinner" style="font-size:36px;">🔍</div>
+        <div style="font-weight:700;color:#7C3AED;margin-top:10px;">Recherche en cours…</div>
+        <div style="font-size:13px;color:#aaa;margin-top:6px;" id="search-status">Interrogation MultiveRH…</div>
+      </div>
+      <div id="search-sources" class="hidden flex mb16"></div>
+      <div id="search-results"></div>
+    </div>
+
+    <!-- ══ CULTIVERH ══ -->
+    <div id="tab-cultiverh" class="hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div>
+            <div style="font-weight:800;font-size:15px;">🏥 MultiveRH — Viviers</div>
+            <div style="font-size:13px;color:#888;">Vos viviers de candidats dans la cvthèque</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="loadViviers()">🔄 Charger les viviers</button>
+        </div>
+        <div id="crm-status" class="alert alert-yellow">Cliquez sur "Charger les viviers" pour vous connecter à MultiveRH.</div>
+        <div id="viviers-list"></div>
+      </div>
+      <div id="vivier-detail" class="hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-weight:800;font-size:15px;" id="vivier-nom">—</div>
+            <button class="btn btn-sm" onclick="closeVivier()" style="background:#f0f4f2;border:none;">← Retour</button>
+          </div>
+          <div id="vivier-candidats"></div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- /tab-recherche -->
+
+    <!-- ══ ONGLET PRINCIPAL : PROSPECTION ══ -->
+    <div id="tab-prospection" class="hidden">
+      <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);">
+        <button class="sub-tab active" onclick="showSubTab('prospection','cv')" id="sub-prospection-cv">📄 Par CV candidat</button>
+        <button class="sub-tab" onclick="showSubTab('prospection','cv-criteres')" id="sub-prospection-cv-criteres">🔍 Par recherche</button>
+        <button class="sub-tab" onclick="showSubTab('prospection','cv-lusha')" id="sub-prospection-cv-lusha">📊 Import Lusha</button>
+        <button class="sub-tab" onclick="showSubTab('prospection','ia')" id="sub-prospection-ia">🎯 Prospection IA</button>
+        <button class="sub-tab" onclick="showSubTab('prospection','clay')" id="sub-prospection-clay">🧱 Enrichir via Clay</button>
+        <button class="sub-tab" onclick="showSubTab('prospection','contacts')" id="sub-prospection-contacts">📬 Emails de prospection</button>
+      </div>
+
+    <!-- ══ PHANTOMBUSTER (caché, repris dans le bouton inline) ══ -->
+    <div id="tab-phantom" class="hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div>
+            <div style="font-weight:800;font-size:15px;">👻 Phantombuster — Leads LinkedIn</div>
+            <div style="font-size:13px;color:#888;">Gérez vos phantoms et récupérez les leads scrapés</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="loadPhantoms()">🔄 Charger</button>
+        </div>
+        <div id="phantom-status" class="alert alert-yellow">Cliquez sur "Charger" pour voir vos phantoms actifs.</div>
+        <div id="phantoms-list"></div>
+      </div>
+      <div id="phantom-leads-section" class="hidden">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-weight:800;font-size:15px;" id="phantom-nom">—</div>
+            <button class="btn btn-sm" onclick="closePhantomLeads()" style="background:#f0f4f2;border:none;">← Retour</button>
+          </div>
+          <div id="phantom-leads-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CV ══ -->
+    <div id="tab-cv" class="hidden">
+      <div class="card">
+        <div class="label">Déposer ou coller un CV de candidat</div>
+        <div class="flex mb16">
+          <button class="btn btn-primary btn-sm" onclick="setCvMode('paste')" id="cv-mode-paste">📝 Coller texte</button>
+          <label for="cv-file" class="btn btn-sm" id="cv-mode-file" style="background:#f0f4f2;border:none;cursor:pointer;" onclick="setCvMode('file')">📎 Déposer PDF</label>
+          <input type="file" id="cv-file" accept=".pdf,.txt" style="display:none;" onchange="handleCvFile(this)"/>
+        </div>
+        <div id="cv-paste-zone">
+          <textarea id="cv-text" placeholder="Collez ici le contenu du CV…" rows="8"></textarea>
+        </div>
+        <div id="cv-file-zone" class="hidden">
+          <div style="border:2px dashed #b8d8cc;border-radius:12px;padding:14px 18px;background:#f7fbf9;display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-weight:700;color:#1a7a5e;" id="cv-file-label">Aucun fichier sélectionné</div>
+            <label for="cv-file" style="font-size:12px;color:#1a7a5e;cursor:pointer;text-decoration:underline;">Changer</label>
+          </div>
+          <div id="cv-pdf-preview" class="hidden" style="margin-top:12px;border:1px solid #b8d8cc;border-radius:12px;overflow:hidden;">
+            <embed id="cv-pdf-frame" type="application/pdf" style="width:100%;height:500px;border:none;"/>
+          </div>
+        </div>
+        <div class="flex mt16" style="justify-content:flex-end;">
+          <button class="btn btn-primary" onclick="analyzeCv()">🤖 Analyser le CV</button>
+        </div>
+      </div>
+      <div id="cv-loading" class="hidden" style="text-align:center;padding:36px;">
+        <div class="spinner" style="font-size:32px;">⚙️</div>
+        <div style="font-weight:700;color:#1a7a5e;margin-top:10px;">Analyse IA du CV…</div>
+      </div>
+      <div id="cv-result"></div>
+    </div>
+
+    <!-- ══ PROSPECTION — PAR RECHERCHE PAR CRITÈRES ══ -->
+    <div id="tab-cv-criteres" class="hidden">
+      <div class="card">
+        <div class="label">Lancer une recherche par critères pour prospecter</div>
+        <div style="font-size:12px;color:#888;margin-bottom:14px;">Saisis les critères, puis lance la recherche sur tes sources. Les candidats trouvés iront dans la prospection.</div>
+        <div class="row">
+          <div style="flex:1 1 200px;">
+            <div class="label">🎯 Poste / Intitulé</div>
+            <input type="text" id="prc-poste" placeholder="Infirmière de nuit, Médecin coordonnateur…"/>
+          </div>
+          <div style="flex:1 1 200px;">
+            <div class="label">👤 Métier</div>
+            <input type="text" id="prc-metier" placeholder="IDE, AS, Médecin du travail…"/>
+          </div>
+        </div>
+        <div class="row mt8">
+          <div style="flex:1 1 200px;">
+            <div class="label">📍 Lieu</div>
+            <input type="text" id="prc-lieu" placeholder="Paris, Lyon, Île-de-France…"/>
+          </div>
+          <div style="flex:1 1 130px;">
+            <div class="label">📄 Contrat</div>
+            <select id="prc-contrat">
+              <option value="">Tous</option>
+              <option>CDI</option><option>CDD</option>
+              <option>Intérim</option><option>Vacation</option><option>Libéral</option>
+            </select>
+          </div>
+          <div style="flex:1 1 130px;">
+            <div class="label">⏱ Expérience</div>
+            <input type="text" id="prc-exp" placeholder="2 ans, débutant…"/>
+          </div>
+        </div>
+        <div class="label mt16">🏷 Compétences (séparées par virgule)</div>
+        <input type="text" id="prc-skills" placeholder="EHPAD, soins palliatifs, bloc opératoire…"/>
+        <div class="flex mt16" style="justify-content:flex-end;">
+          <button class="btn btn-primary" onclick="lancerRechercheCriteres()">🤖 Préparer la prospection →</button>
+        </div>
+      </div>
+      <div id="prc-loading" class="hidden" style="text-align:center;padding:30px;">
+        <div class="spinner" style="font-size:32px;">⚙️</div>
+        <div style="font-weight:700;color:#1a7a5e;margin-top:10px;">Préparation…</div>
+      </div>
+      <div id="prc-result"></div>
+    </div>
+
+    <!-- ══ PROSPECTION — IMPORT EXCEL LUSHA ══ -->
+    <div id="tab-cv-lusha" class="hidden">
+      <div class="card">
+        <div class="label">📊 Importer un fichier Excel Lusha</div>
+        <div style="font-size:12px;color:#888;margin-bottom:14px;">
+          Charge un export <strong>.xlsx</strong> depuis Lusha (colonnes nom, prénom, email, téléphone, métier, entreprise, ville, etc.).
+          Les leads seront ensuite créés dans ton CRM MultiveRH via l'extension Claude.
+        </div>
+        <div style="border:2px dashed #b8d8cc;border-radius:12px;padding:18px 20px;background:#f7fbf9;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div style="font-weight:700;color:#1a7a5e;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="lusha-file-label">Aucun fichier sélectionné</div>
+          <label for="lusha-file" class="btn btn-sm" style="background:#1a7a5e;color:#fff;border:none;cursor:pointer;">📎 Choisir .xlsx</label>
+          <input type="file" id="lusha-file" accept=".xlsx,.xls" style="display:none;" onchange="handleLushaFile(this)"/>
+        </div>
+        <div class="flex mt16" style="justify-content:flex-end;">
+          <button class="btn btn-primary" id="lusha-upload-btn" onclick="importLusha()" disabled style="opacity:0.5;">📊 Importer vers le CRM →</button>
+        </div>
+      </div>
+      <div id="lusha-loading" class="hidden" style="text-align:center;padding:30px;">
+        <div class="spinner" style="font-size:32px;">📊</div>
+        <div style="font-weight:700;color:#1a7a5e;margin-top:10px;">Parsing du fichier Excel…</div>
+      </div>
+      <div id="lusha-result"></div>
+    </div>
+
+    <!-- ══ CONTACTS / EMAILS ══ -->
+    <!-- ══ PROSPECTION IA (3 niveaux) ══ -->
+    <div id="tab-ia" class="hidden">
+      <div class="card">
+        <div style="background:#f5f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#5b21b6;line-height:1.55;">
+          🎯 <strong>Prospection IA en 3 niveaux</strong> — Dépose un CV, l'agent identifie le métier + la zone, puis trouve :<br>
+          1️⃣ Les sociétés <strong>qui recrutent</strong> ce métier maintenant<br>
+          2️⃣ Les <strong>sociétés du secteur</strong> (cabinets, bureaux d'études…)<br>
+          3️⃣ Les sociétés <strong>>50 salariés</strong> ayant probablement un service similaire<br>
+          Puis crée un <strong>vivier de prospection</strong> dans MultiveRH.
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <div class="label">Métier visé (extrait du CV automatiquement)</div>
+            <input type="text" id="ia-metier" placeholder="ex : comptable fournisseur">
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <div class="label">Localisation</div>
+            <input type="text" id="ia-lieu" placeholder="ex : Toulouse">
+          </div>
+          <button class="btn btn-primary" onclick="lancerProspectionIA()">🚀 Lancer la prospection</button>
+        </div>
+
+        <div style="margin-top:14px;text-align:center;color:var(--muted);font-size:12px;">— ou bien —</div>
+
+        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
+          <label for="ia-cv-file" class="btn btn-purple" style="cursor:pointer;">📎 Déposer un CV (auto-détection)</label>
+          <input type="file" id="ia-cv-file" accept=".pdf,.txt" style="display:none;" onchange="ia_handleCvFile(this)">
+          <span id="ia-cv-status" style="font-size:12px;color:var(--muted);"></span>
+        </div>
+      </div>
+
+      <div id="ia-loading" class="hidden card" style="text-align:center;padding:30px;">
+        <div class="spinner" style="font-size:36px;">🔍</div>
+        <div style="font-weight:700;color:var(--brand);margin-top:10px;" id="ia-loading-text">Analyse en cours…</div>
+      </div>
+
+      <div id="ia-results"></div>
+    </div>
+
+    <!-- ══ CLAY ══ -->
+    <div id="tab-clay" class="hidden">
+      <div class="card">
+        <div style="background:#f5f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#5b21b6;line-height:1.55;">
+          🧱 <strong>Enrichissement via Clay</strong> — Exporte tes sociétés MultiveRH en CSV, importe-le dans ta table Clay pour obtenir les contacts (DRH, recruteurs) puis ré-importe le CSV enrichi pour mettre à jour MultiveRH.
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+          <!-- EXPORT -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:16px;background:#fafdfc;">
+            <div style="font-weight:800;color:var(--brand);margin-bottom:14px;">⬇️ 1. Exporter sociétés → Clay</div>
+
+            <div class="label">Type de société</div>
+            <select id="clay-export-type" style="margin-bottom:12px;">
+              <option value="all">Toutes</option>
+              <option value="prospect">Prospects seulement</option>
+              <option value="client">Clients seulement</option>
+            </select>
+
+            <div class="label">Limite</div>
+            <input type="number" id="clay-export-limit" value="500" min="10" max="5000" style="margin-bottom:12px;">
+
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;">
+              <input type="checkbox" id="clay-export-with-website" checked style="width:auto;">
+              Uniquement les sociétés avec un site web
+            </label>
+
+            <button class="btn btn-primary" onclick="clayExport()" style="width:100%;">📥 Télécharger CSV pour Clay</button>
+
+            <div id="clay-export-status" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>
+          </div>
+
+          <!-- IMPORT -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:16px;background:#fafdfc;">
+            <div style="font-weight:800;color:var(--brand);margin-bottom:14px;">⬆️ 2. Importer enrichissement Clay</div>
+
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+              Le CSV doit contenir les colonnes : <code>company_id, first_name, last_name, email, job, phone</code>
+            </div>
+
+            <div class="label">Nom du vivier de prospection</div>
+            <input type="text" id="clay-import-group" placeholder="ex : DRH EHPAD Paris — Mai 2026" style="margin-bottom:10px;">
+
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;">
+              <input type="checkbox" id="clay-import-share" style="width:auto;">
+              Partager le vivier avec mon équipe
+            </label>
+
+            <label for="clay-import-input" class="btn btn-purple" style="display:block;text-align:center;cursor:pointer;width:100%;margin-bottom:8px;">📎 Choisir un fichier CSV enrichi</label>
+            <input type="file" id="clay-import-input" accept=".csv" style="display:none;" onchange="clayImport(this)">
+
+            <div id="clay-import-status" style="font-size:13px;margin-top:14px;"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;padding:12px 16px;background:#FFF8E1;border:1px solid #FFE0B2;border-radius:8px;font-size:12px;color:#7A5000;line-height:1.6;">
+          <strong>💡 Workflow Clay</strong> :<br>
+          1. Télécharge le CSV ci-dessus<br>
+          2. Va sur <a href="https://app.clay.com" target="_blank" style="color:#7A5000;font-weight:600;">app.clay.com</a> → ouvre/crée une table → "Import CSV"<br>
+          3. Ajoute les enrichissements Clay (Find People, LinkedIn, Email Finder) pour récupérer DRH/Talent Acquisition<br>
+          4. Exporte le résultat en CSV depuis Clay<br>
+          5. Glisse le CSV enrichi dans le bloc droite pour créer les contacts dans MultiveRH
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-contacts" class="hidden">
+      <div id="contacts-empty" class="alert alert-yellow">
+        ℹ️ Sélectionnez des candidats dans <strong>🔍 Recherche</strong> puis lancez la prospection.
+      </div>
+      <div id="contacts-list"></div>
+    </div>
+
+    </div><!-- /tab-prospection -->
+
+    <!-- ══ ADMIN ══ -->
+    <div id="tab-admin" class="hidden">
+      <div class="card">
+        <div style="font-weight:800;font-size:15px;margin-bottom:16px;">⚙️ Gestion des collaborateurs</div>
+        <div style="font-weight:700;margin-bottom:8px;">Ajouter un compte</div>
+        <div class="row mb16">
+          <input type="text" id="new-nom" placeholder="Prénom Nom" style="flex:1"/>
+          <input type="email" id="new-email" placeholder="email@lebonsoignant.fr" style="flex:1"/>
+          <input type="password" id="new-password" placeholder="Mot de passe" style="flex:1"/>
+          <select id="new-role" style="flex:0 0 130px;">
+            <option value="recruteur">Recruteur</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="createUser()">Créer</button>
+        </div>
+        <div id="admin-msg" class="hidden" style="margin-bottom:12px;"></div>
+        <div style="font-weight:700;margin-bottom:8px;">Comptes existants</div>
+        <div id="users-list"></div>
+        <button class="btn btn-sm mt16" onclick="loadUsers()" style="background:#f0f4f2;border:none;">🔄 Actualiser</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config backend ──
+const API = 'https://lbs-agent-backend.onrender.com/api';
+const MODEL = 'claude-haiku-4-5-20251001';
+
+// ── État global ──
+const STATE = {
+  token: localStorage.getItem('lbs_token') || '',
+  user: JSON.parse(localStorage.getItem('lbs_user') || 'null'),
+  candidates: [],
+  selected: [],
+  cvProfile: null,
+  mails: {},
+  sent: {},
+  contacts: {},
+};
+
+// ── Init ──
+window.onload = async () => {
+  // SSO : si des paramètres sso_* sont présents dans l'URL, échange contre un JWT
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('sso_email') && params.get('sso_ts') && params.get('sso_sig')) {
+    try {
+      const res = await fetch(`${API}/auth/sso-exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: params.get('sso_email'),
+          name:  params.get('sso_name') || '',
+          ts:    parseInt(params.get('sso_ts'), 10),
+          sig:   params.get('sso_sig'),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        STATE.token = data.token;
+        STATE.user = data.user;
+        localStorage.setItem('lbs_token', data.token);
+        localStorage.setItem('lbs_user', JSON.stringify(data.user));
+        // Garde les params SSO en session pour les appels cross-origin vers MultiveRH
+        sessionStorage.setItem('lbs_sso_params', JSON.stringify({
+          email: params.get('sso_email'),
+          name:  params.get('sso_name') || '',
+          ts:    parseInt(params.get('sso_ts'), 10),
+          sig:   params.get('sso_sig'),
+        }));
+        // Nettoie l'URL pour ne pas garder le token visible
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    } catch (e) {
+      console.warn('SSO échec:', e);
+    }
+  }
+
+  if (STATE.token && STATE.user) {
+    await showApp();
+  } else {
+    // Pas authentifié → on retire le masquage anti-flash pour afficher le login
+    document.documentElement.classList.remove('lbs-sso-pending');
+  }
+  updateQuery();
+};
+
+// ══ AUTH ══
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const errDiv = document.getElementById('login-error');
+
+  if (!email || !password) { errDiv.textContent = 'Email et mot de passe requis'; errDiv.classList.remove('hidden'); return; }
+
+  btn.textContent = '⏳ Connexion…';
+  btn.disabled = true;
+  errDiv.classList.add('hidden');
+
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 20000);
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      signal: controller.signal,
+    });
+    clearTimeout(tid);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur de connexion');
+
+    STATE.token = data.token;
+    STATE.user = data.user;
+    localStorage.setItem('lbs_token', data.token);
+    localStorage.setItem('lbs_user', JSON.stringify(data.user));
+    await showApp();
+  } catch (e) {
+    errDiv.textContent = e.message;
+    errDiv.classList.remove('hidden');
+    btn.textContent = 'Se connecter →';
+    btn.disabled = false;
+  }
+}
+
+async function showApp() {
+  document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('pill-user').textContent = '👤 ' + STATE.user.nom;
+  if (STATE.user.role === 'admin') {
+    document.getElementById('tab-admin-btn').style.display = '';
+    loadUsers();
+  }
+  await checkServices();
+}
+
+function doLogout() {
+  STATE.token = '';
+  STATE.user = null;
+  localStorage.removeItem('lbs_token');
+  localStorage.removeItem('lbs_user');
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-btn').textContent = 'Se connecter →';
+  document.getElementById('login-btn').disabled = false;
+}
+
+async function checkServices() {
+  try {
+    const res = await fetch(`${API}/health`);
+    const data = await res.json();
+    const ok = Object.entries(data.services).filter(([,v]) => v).map(([k]) => k);
+    document.getElementById('pill-services').textContent = `✅ ${ok.length} services`;
+  } catch {
+    document.getElementById('pill-services').textContent = '⚠️ Backend hors ligne';
+  }
+}
+
+// ── Appel API authentifié ──
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${API}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${STATE.token}`,
+      ...(options.headers || {}),
+    },
+  });
+  if (res.status === 401) { doLogout(); throw new Error('Session expirée — reconnectez-vous'); }
+  return res;
+}
+
+// ── Appel Claude via backend ──
+async function callClaude(messages, system) {
+  const res = await apiFetch('/claude/messages', {
+    method: 'POST',
+    body: JSON.stringify({ model: MODEL, max_tokens: 1500, system, messages }),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || data.error);
+  return data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+}
+
+// ── Navigation ──
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('[id^="tab-"]').forEach(d => d.classList.add('hidden'));
+  const target = document.getElementById('tab-' + name);
+  if (target) target.classList.remove('hidden');
+  const btn = document.querySelector(`[onclick="showTab('${name}')"]`);
+  if (btn) btn.classList.add('active');
+}
+
+// Onglets principaux Recherche / Prospection
+function showMainTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  ['recherche', 'prospection', 'admin'].forEach(n => {
+    const el = document.getElementById('tab-' + n);
+    if (el) el.classList.add('hidden');
+  });
+  const target = document.getElementById('tab-' + name);
+  if (target) target.classList.remove('hidden');
+  const btn = document.querySelector(`[onclick="showMainTab('${name}')"]`);
+  if (btn) btn.classList.add('active');
+  // Active le 1er sous-onglet par défaut
+  if (name === 'recherche') showSubTab('recherche', 'fiche');
+  else if (name === 'prospection') showSubTab('prospection', 'cv');
+}
+
+// ══ PROSPECTION IA ══
+async function ia_handleCvFile(input) {
+  const f = input.files[0];
+  if (!f) return;
+  const status = document.getElementById('ia-cv-status');
+  status.textContent = '⏳ Analyse du CV…';
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const data = e.target.result.split(',')[1];
+    try {
+      const res = await apiFetch('/claude/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5',
+          max_tokens: 500,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } },
+              { type: 'text', text: 'Renvoie uniquement un JSON {"metier":"...", "localisation":"ville ou région"}.' },
+            ],
+          }],
+        }),
+      });
+      const j = await res.json();
+      const raw = j.content?.[0]?.text || '';
+      const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      document.getElementById('ia-metier').value = parsed.metier || '';
+      document.getElementById('ia-lieu').value = parsed.localisation || '';
+      status.textContent = '✅ CV analysé — clique "Lancer"';
+      lancerProspectionIA();
+    } catch (err) {
+      status.textContent = '❌ Erreur analyse : ' + err.message;
+    }
+  };
+  reader.readAsDataURL(f);
+}
+
+async function lancerProspectionIA() {
+  const metier = document.getElementById('ia-metier').value.trim();
+  const lieu = document.getElementById('ia-lieu').value.trim();
+  if (!metier) { showError('Renseigne au moins le métier'); return; }
+
+  document.getElementById('ia-loading').classList.remove('hidden');
+  document.getElementById('ia-loading-text').textContent = 'Recherche sociétés (Tier 1/2/3)…';
+  document.getElementById('ia-results').innerHTML = '';
+
+  try {
+    const r = await apiFetch('/prospection/companies-from-cv', {
+      method: 'POST',
+      body: JSON.stringify({ metier, lieu, limit_per_tier: 40 }),
+    });
+    const data = await r.json();
+    document.getElementById('ia-loading').classList.add('hidden');
+    renderProspectionResults(data);
+  } catch (e) {
+    document.getElementById('ia-loading').classList.add('hidden');
+    showError('Erreur prospection : ' + e.message);
+  }
+}
+
+function renderProspectionResults(data) {
+  const container = document.getElementById('ia-results');
+  window.__iaResultsData = data;
+
+  const totalCompanies = data.tiers.reduce((s, t) => s + (t.companies?.length || 0), 0);
+
+  let html = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      <div>
+        <div style="font-weight:800;font-size:16px;">${totalCompanies} société(s) identifiée(s)</div>
+        <div style="font-size:12px;color:var(--muted);">${data.metier} · ${data.lieu || 'France'} · NAF: ${(data.naf_codes_detectes||[]).join(', ')||'aucun'} · Dépt: ${data.departement_detecte||'?'}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-purple btn-sm" onclick="ia_enrichAll('drh')" title="Cherche DRH/RRH gratuitement via Google + déduit pattern email">⚡ Tout enrichir (DRH gratuit)</button>
+        <button class="btn btn-purple btn-sm" onclick="ia_enrichAll('compta')" title="Cherche DAF/Resp Compta">⚡ Tout enrichir (Compta)</button>
+        <button class="btn btn-purple btn-sm" onclick="ia_exportCsv()">📥 Exporter CSV</button>
+        <button class="btn btn-primary btn-sm" onclick="ia_creerVivier()">🎯 Créer vivier MultiveRH</button>
+      </div>
+    </div>
+  </div>`;
+
+  let cardIdx = 0;
+  for (let ti = 0; ti < data.tiers.length; ti++) {
+    const tier = data.tiers[ti];
+    const cs = tier.companies || [];
+    html += `<div class="card" style="margin-bottom:14px;">
+      <div style="font-weight:800;color:var(--brand);margin-bottom:10px;">${tier.label} <span style="color:var(--muted);font-weight:400;">(${cs.length})</span></div>`;
+    if (cs.length === 0) {
+      html += `<div style="font-style:italic;color:var(--muted);font-size:13px;">Aucun résultat sur ce tier.</div>`;
+    } else {
+      html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;">`;
+      for (let ci = 0; ci < cs.length; ci++) {
+        const c = cs[ci];
+        const cid = `card-${ti}-${ci}`;
+        c.__cardId = cid;
+        html += `<div id="${cid}" style="background:#fafdfc;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;">
+          <div style="font-weight:700;color:var(--navy);margin-bottom:3px;">${c.name || ''}</div>
+          <div style="color:var(--muted);">${c.city || c.ville || ''} ${c.zipcode ? '· '+c.zipcode : ''}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+            ${c.website ? `<a href="${c.website}" target="_blank" style="color:#58A693;">🌐 site</a>` : ''}
+            ${c.sirene_url ? `<a href="${c.sirene_url}" target="_blank" style="color:#7B8A87;font-size:11px;">SIRENE</a>` : ''}
+          </div>
+          ${c.offer_title ? `<div style="color:#FF5A1F;font-size:11px;margin-top:3px;">📋 ${c.offer_title}</div>` : ''}
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompany(${ti}, ${ci}, 'drh')">⚡ DRH</button>
+            <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompany(${ti}, ${ci}, 'compta')">⚡ Compta</button>
+            <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompany(${ti}, ${ci}, 'direction')">⚡ Direction</button>
+          </div>
+          <div id="enrich-${cid}" style="margin-top:6px;"></div>
+        </div>`;
+        cardIdx++;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ── Enrichissement cascade d'UNE société (DRH/Compta/Direction) ──
+async function ia_enrichCompany(tierIdx, cIdx, role) {
+  const data = window.__iaResultsData;
+  if (!data) return;
+  const company = data.tiers[tierIdx]?.companies?.[cIdx];
+  if (!company) return;
+  const cid = company.__cardId || `card-${tierIdx}-${cIdx}`;
+  const target = document.getElementById(`enrich-${cid}`);
+  if (!target) return;
+
+  target.innerHTML = `<div style="padding:6px;color:var(--muted);font-style:italic;">⏳ Recherche ${role} (gratuit Google + scrape)…</div>`;
+
+  try {
+    const r = await apiFetch('/prospection/enrich-cascade', {
+      method: 'POST',
+      body: JSON.stringify({
+        company: {
+          name: company.name,
+          website: company.website || '',
+          siret: company.siret || '',
+        },
+        role,
+      }),
+    });
+    const result = await r.json();
+    company.__enrich = company.__enrich || {};
+    company.__enrich[role] = result;
+    renderEnrichResult(target, result, tierIdx, cIdx, role);
+  } catch (e) {
+    target.innerHTML = `<div style="color:#c00;font-size:11px;">❌ ${e.message}</div>`;
+  }
+}
+
+function renderEnrichResult(target, result, tierIdx, cIdx, role) {
+  const people = result.people || [];
+  const emails = result.emails_generated || [];
+  const contacts = emails.length ? emails : people;
+
+  let html = '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;">';
+
+  // Header pattern
+  if (result.pattern) {
+    html += `<div style="font-size:11px;color:#2a8a72;margin-bottom:4px;">
+      📧 Pattern <code style="background:#e9f5f1;padding:1px 4px;border-radius:3px;">${result.pattern}</code>
+      <span style="color:var(--muted);font-size:10px;">via ${result.pattern_source}</span>
+    </div>`;
+  } else if (result.lusha_needed) {
+    html += `<div style="font-size:11px;color:#a87;margin-bottom:4px;">
+      ⚠️ Pattern email introuvable gratuitement
+      <button class="btn btn-warn btn-sm" style="padding:2px 6px;font-size:10px;margin-left:4px;"
+        onclick="ia_lushaFinalize(${tierIdx},${cIdx},'${role}')">💰 1 crédit Lusha</button>
+    </div>`;
+  }
+
+  // Liste contacts
+  if (contacts.length === 0) {
+    html += `<div style="font-size:11px;color:var(--muted);font-style:italic;">Aucune personne trouvée</div>`;
+  } else {
+    html += `<div style="font-size:11px;font-weight:600;color:var(--navy);margin-bottom:4px;">${contacts.length} ${role.toUpperCase()} trouvé(s)</div>`;
+    for (let i = 0; i < contacts.length; i++) {
+      const p = contacts[i];
+      html += `<div style="background:#fff;border:1px solid #e8efed;border-radius:6px;padding:5px 7px;margin-bottom:3px;font-size:11px;">
+        <div style="display:flex;justify-content:space-between;gap:6px;align-items:center;">
+          <div>
+            <strong>${p.first_name} ${p.last_name}</strong>
+            <span style="color:var(--muted);font-size:10px;">${p.title || ''}</span>
+          </div>
+          ${p.linkedin ? `<a href="${p.linkedin}" target="_blank" style="font-size:10px;">LI</a>` : ''}
+        </div>
+        ${p.email ? `<div style="color:#2a8a72;font-size:10px;margin-top:2px;">✉️ ${p.email}</div>` : ''}
+        <div style="display:flex;gap:4px;margin-top:3px;">
+          <button class="btn btn-warn btn-sm" style="padding:1px 5px;font-size:10px;"
+            onclick="ia_lushaPhone(${tierIdx},${cIdx},'${role}',${i})">📞 Tel (1 crédit)</button>
+        </div>
+      </div>`;
+    }
+  }
+
+  // Log debug (repliable)
+  if (result.log?.length) {
+    html += `<details style="margin-top:4px;"><summary style="font-size:10px;color:var(--muted);cursor:pointer;">▸ log cascade</summary>
+      <div style="font-size:10px;font-family:monospace;color:var(--muted);">${result.log.join('<br>')}</div>
+    </details>`;
+  }
+
+  html += '</div>';
+  target.innerHTML = html;
+}
+
+// ── Compléter via Lusha (1 crédit) quand cascade gratuite a échoué ──
+async function ia_lushaFinalize(tierIdx, cIdx, role) {
+  const data = window.__iaResultsData;
+  const company = data.tiers[tierIdx]?.companies?.[cIdx];
+  if (!company?.__enrich?.[role]) return;
+  const enrich = company.__enrich[role];
+  if (!enrich.people?.length) return alert('Aucun contact à enrichir');
+
+  if (!confirm(`Lusha va consommer 1 crédit pour trouver l'email de ${enrich.people[0].first_name} ${enrich.people[0].last_name}.\n\nLe pattern email sera ensuite déduit et appliqué gratuitement aux ${enrich.people.length - 1} autres contacts.\n\nContinuer ?`)) return;
+
+  const target = document.getElementById(`enrich-${company.__cardId}`);
+  target.innerHTML = '<div style="padding:6px;color:var(--muted);font-style:italic;">⏳ Lusha en cours (1 crédit)…</div>';
+
+  try {
+    const p0 = enrich.people[0];
+    // 1) Lusha lookup sur 1 personne
+    const r = await apiFetch('/lusha/lookup-person', {
+      method: 'POST',
+      body: JSON.stringify({
+        first_name: p0.first_name, last_name: p0.last_name,
+        company_name: company.name, company_domain: enrich.domain || '',
+      }),
+    });
+    const lushaData = await r.json();
+    if (!lushaData.email) {
+      target.innerHTML = `<div style="color:#c00;font-size:11px;">❌ Lusha n'a pas trouvé d'email pour ${p0.first_name} ${p0.last_name}</div>`;
+      return;
+    }
+    // 2) Extrait pattern + sauvegarde
+    const r2 = await apiFetch('/prospection/extract-pattern', {
+      method: 'POST',
+      body: JSON.stringify({ email: lushaData.email, first_name: p0.first_name, last_name: p0.last_name }),
+    });
+    const pat = await r2.json();
+    if (!pat.ok) {
+      // Email récupéré mais pattern non déductible — au moins on a 1 email
+      enrich.people[0].email = lushaData.email;
+      renderEnrichResult(target, enrich, tierIdx, cIdx, role);
+      return;
+    }
+    enrich.pattern = pat.pattern;
+    enrich.pattern_source = 'lusha';
+    // 3) Apply à tous
+    const r3 = await apiFetch('/prospection/apply-pattern', {
+      method: 'POST',
+      body: JSON.stringify({ pattern: pat.pattern, contacts: enrich.people.map(p => ({ first_name: p.first_name, last_name: p.last_name })) }),
+    });
+    const applied = await r3.json();
+    enrich.emails_generated = enrich.people.map((p, i) => ({
+      ...p,
+      email: applied.contacts[i]?.email,
+      email_valid: applied.contacts[i]?.email_valid,
+      email_source: i === 0 ? 'lusha' : 'lusha_pattern',
+    }));
+    enrich.lusha_needed = false;
+    renderEnrichResult(target, enrich, tierIdx, cIdx, role);
+  } catch (e) {
+    target.innerHTML = `<div style="color:#c00;font-size:11px;">❌ ${e.message}</div>`;
+  }
+}
+
+// ── Récupère N° tel d'UN contact (1 crédit Lusha) ──
+async function ia_lushaPhone(tierIdx, cIdx, role, contactIdx) {
+  const data = window.__iaResultsData;
+  const company = data.tiers[tierIdx]?.companies?.[cIdx];
+  const enrich = company?.__enrich?.[role];
+  const contacts = enrich?.emails_generated?.length ? enrich.emails_generated : enrich?.people;
+  const contact = contacts?.[contactIdx];
+  if (!contact) return;
+  if (!confirm(`Récupérer le numéro de ${contact.first_name} ${contact.last_name} ?\n(1 crédit Lusha)`)) return;
+  try {
+    const r = await apiFetch('/lusha/lookup-person', {
+      method: 'POST',
+      body: JSON.stringify({
+        first_name: contact.first_name, last_name: contact.last_name,
+        company_name: company.name, company_domain: enrich.domain || '',
+        want_phone: true,
+      }),
+    });
+    const d = await r.json();
+    if (d.phone) {
+      contact.phone = d.phone;
+      alert(`📞 ${contact.first_name} ${contact.last_name} : ${d.phone}`);
+      const target = document.getElementById(`enrich-${company.__cardId}`);
+      renderEnrichResult(target, enrich, tierIdx, cIdx, role);
+    } else {
+      alert('❌ Aucun numéro trouvé pour ce contact');
+    }
+  } catch (e) {
+    alert('❌ ' + e.message);
+  }
+}
+
+// ── Enrichit TOUTES les sociétés affichées (batch, sequential) ──
+async function ia_enrichAll(role) {
+  const data = window.__iaResultsData;
+  if (!data) return;
+  const all = [];
+  for (let ti = 0; ti < data.tiers.length; ti++) {
+    for (let ci = 0; ci < (data.tiers[ti].companies || []).length; ci++) {
+      all.push([ti, ci]);
+    }
+  }
+  if (!all.length) return;
+  if (!confirm(`Lancer l'enrichissement ${role.toUpperCase()} sur ${all.length} sociétés ?\n\n100% gratuit (Google + scrape). Durée estimée : ~${Math.ceil(all.length * 8 / 60)} min.`)) return;
+  for (let i = 0; i < all.length; i++) {
+    const [ti, ci] = all[i];
+    await ia_enrichCompany(ti, ci, role);
+    // Pause 500ms entre chaque pour éviter rate-limit Serper
+    await new Promise(r => setTimeout(r, 500));
+  }
+  alert(`✅ Enrichissement ${role} terminé sur ${all.length} sociétés`);
+}
+
+function ia_exportCsv() {
+  const data = window.__iaResultsData;
+  if (!data) return;
+  const rows = [['company_id','name','website','city','zipcode','siret','naf','tier','tier_label','source']];
+  for (const tier of data.tiers) {
+    for (const c of (tier.companies || [])) {
+      rows.push(['', c.name||'', c.website||'', c.city||c.ville||'', c.zipcode||'', c.siret||'', c.naf||'', tier.tier, tier.label, (c.sources||[c.source]||[]).join(',')]);
+    }
+  }
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `prospection-${data.metier}-${data.lieu||'france'}-${Date.now()}.csv`.replace(/\s+/g,'_');
+  a.click();
+}
+
+async function ia_creerVivier() {
+  const data = window.__iaResultsData;
+  if (!data) return;
+  const allCompanies = data.tiers.flatMap(t => (t.companies || []).map(c => ({ ...c, tier_label: t.label })));
+  if (!allCompanies.length) { showError('Aucune société à ajouter'); return; }
+
+  const groupName = prompt('Nom du vivier de prospection :',
+    `Prospection ${data.metier} - ${data.lieu||'France'} - ${new Date().toLocaleDateString('fr-FR')}`);
+  if (!groupName) return;
+
+  const baseHost = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
+    ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
+
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Création vivier…'; }
+
+  try {
+    const r = await fetch(`https://${baseHost}/admin/api/clay-create-vivier-from-companies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ group_name: groupName, companies: allCompanies }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const out = await r.json();
+    if (out.ok) {
+      alert(`✅ Vivier "${out.group_name}" créé !\n\n${out.stats.companies_created} sociétés créées, ${out.stats.companies_existing} déjà connues.`);
+      window.open(`https://${baseHost}${out.vivier_url}`, '_blank');
+    } else {
+      alert('❌ ' + (out.error || 'erreur inconnue'));
+    }
+  } catch (e) {
+    alert('❌ Erreur : ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🎯 Créer vivier MultiveRH'; }
+  }
+}
+
+// Clay — export sociétés
+function clayExport() {
+  const type = document.getElementById('clay-export-type').value;
+  const limit = document.getElementById('clay-export-limit').value || 500;
+  const withSite = document.getElementById('clay-export-with-website').checked;
+  const url = new URL('https://www.lebonsoignant.fr/admin/api/clay-export');
+  url.searchParams.set('type', type);
+  url.searchParams.set('limit', limit);
+  if (withSite) url.searchParams.set('with_website', '1');
+  if (location.hostname.includes('preprod') || document.referrer.includes('preprod')) {
+    url.hostname = 'preprod.lebonsoignant.fr';
+  }
+  document.getElementById('clay-export-status').textContent = '⏳ Téléchargement en cours…';
+  window.open(url.toString(), '_blank');
+  setTimeout(() => {
+    document.getElementById('clay-export-status').textContent = '✅ Si le téléchargement ne démarre pas, vérifie que tu es bien connecté à MultiveRH dans l\'onglet voisin.';
+  }, 1500);
+}
+
+async function clayImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('clay-import-status');
+  status.style.color = 'var(--muted)';
+  status.innerHTML = '⏳ Upload du CSV…';
+  const fd = new FormData();
+  fd.append('csv', file);
+  const groupName = (document.getElementById('clay-import-group')?.value || '').trim();
+  const share = document.getElementById('clay-import-share')?.checked;
+  if (groupName) fd.append('group_name', groupName);
+  if (share) fd.append('share', '1');
+
+  const baseHost = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
+    ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
+  try {
+    const r = await fetch(`https://${baseHost}/admin/api/clay-import`, {
+      method: 'POST', body: fd, credentials: 'include',
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error('HTTP ' + r.status + ' — ' + txt.slice(0, 200));
+    }
+    const data = await r.json();
+    status.style.color = '#3F8A78';
+    let html = `✅ Import terminé : <strong>${data.created}</strong> contact(s) créé(s), <strong>${data.updated}</strong> mis à jour, ${data.skipped} ignoré(s).`;
+    if (data.group_id && data.group_name) {
+      html += `<br><br>🎯 <strong>Vivier de prospection créé</strong> : "${data.group_name}"<br>`;
+      html += `<a href="https://${baseHost}/admin/companycontactgroup/${data.group_id}" target="_blank" style="color:#58A693;text-decoration:underline;font-weight:600;">→ Ouvrir le vivier dans MultiveRH</a>`;
+    }
+    status.innerHTML = html;
+    if (data.errors && data.errors.length) {
+      status.innerHTML += `<details style="margin-top:8px;"><summary style="cursor:pointer;color:#991b1b;">${data.errors.length} erreur(s)</summary><div style="font-size:11px;max-height:120px;overflow-y:auto;margin-top:6px;">${data.errors.map(e => '• ' + e).join('<br>')}</div></details>`;
+    }
+  } catch (e) {
+    status.style.color = '#991b1b';
+    status.innerHTML = '❌ Erreur : ' + e.message;
+  }
+  input.value = '';
+}
+
+// Sous-onglets dans Recherche et Prospection
+function showSubTab(parent, sub) {
+  const subContainers = {
+    recherche: ['fiche', 'search'],
+    prospection: ['cv', 'cv-criteres', 'cv-lusha', 'ia', 'clay', 'contacts'],
+  };
+  (subContainers[parent] || []).forEach(s => {
+    const el = document.getElementById('tab-' + s);
+    if (el) el.classList.toggle('hidden', s !== sub);
+    const b = document.getElementById('sub-' + parent + '-' + s);
+    if (b) b.classList.toggle('active', s === sub);
+  });
+  if (sub === 'contacts' && typeof renderContacts === 'function') renderContacts();
+}
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('error-box').classList.remove('hidden');
+}
+function hideError() { document.getElementById('error-box').classList.add('hidden'); }
+
+// ══ FICHE DE POSTE ══
+function setFpMode(m) {
+  document.getElementById('fp-paste-zone').classList.toggle('hidden', m !== 'paste');
+  document.getElementById('fp-file-zone').classList.toggle('hidden', m !== 'file');
+  const pa = document.getElementById('fp-paste-action');
+  if (pa) pa.classList.toggle('hidden', m !== 'paste');
+  document.getElementById('fp-mode-paste-btn').className = 'btn btn-sm' + (m === 'paste' ? ' btn-purple' : '');
+  document.getElementById('fp-mode-paste-btn').style = m === 'paste' ? '' : 'background:#f0f4f2;border:none;';
+  document.getElementById('fp-mode-file-btn').className  = 'btn btn-sm' + (m === 'file'  ? ' btn-purple' : '');
+  document.getElementById('fp-mode-file-btn').style  = m === 'file'  ? '' : 'background:#f0f4f2;border:none;';
+}
+
+let fpFileData = null, fpParsed = null;
+
+function handleFpFile(input) {
+  const f = input.files[0];
+  if (!f) return;
+  document.getElementById('fp-file-label').textContent = '✅ ' + f.name;
+  // Prévisualisation directe
+  const previewUrl = URL.createObjectURL(f);
+  document.getElementById('fp-pdf-frame').src = previewUrl;
+  document.getElementById('fp-pdf-preview').classList.remove('hidden');
+  // Encodage base64 pour l'envoi à l'API
+  const reader = new FileReader();
+  reader.onload = e => { fpFileData = { name: f.name, data: e.target.result.split(',')[1] }; };
+  reader.readAsDataURL(f);
+}
+
+async function analyserFiche() {
+  const txt = document.getElementById('fp-text').value.trim();
+  if (!txt && !fpFileData) { showError('Collez une fiche de poste ou déposez un fichier'); return; }
+
+  document.getElementById('fp-loading').classList.remove('hidden');
+  document.getElementById('fp-criteres').classList.add('hidden');
+  document.getElementById('fp-results').innerHTML = '';
+  document.getElementById('fp-sources').classList.add('hidden');
+  hideError();
+
+  try {
+    document.getElementById('fp-status').textContent = 'Extraction des critères par l\'IA…';
+    let messages;
+    const prompt = 'Analyse cette fiche de poste et réponds UNIQUEMENT en JSON valide sans backticks:\n{"intitule":"","metier":"","localisation":"","experience_min":"","type_contrat":"","horaires":"","specialites":[],"resume_poste":""}\n\nFiche:\n';
+
+    if (fpFileData) {
+      messages = [{ role: 'user', content: [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: fpFileData.data } },
+        { type: 'text', text: prompt }
+      ]}];
+    } else {
+      messages = [{ role: 'user', content: prompt + txt }];
+    }
+
+    const raw = await callClaude(messages, 'Expert RH recrutement médical. JSON uniquement sans backticks ni texte.');
+    fpParsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    afficherCriteres(fpParsed);
+  } catch (e) { showError('Erreur analyse fiche: ' + e.message); }
+  document.getElementById('fp-loading').classList.add('hidden');
+}
+
+function afficherCriteres(p) {
+  const div = document.getElementById('fp-criteres-content');
+  const items = [
+    p.intitule     && { label: 'Poste',    val: p.intitule,                      color: '#7C3AED' },
+    p.metier       && { label: 'Métier',   val: p.metier,                         color: '#1a7a5e' },
+    p.localisation && { label: 'Lieu',     val: '📍 ' + p.localisation,           color: '#0077cc' },
+    p.experience_min && { label: 'Exp.',   val: '⏱ ' + p.experience_min,          color: '#b45309' },
+    p.type_contrat && { label: 'Contrat',  val: '📄 ' + p.type_contrat,           color: '#059669' },
+    p.horaires     && { label: 'Horaires', val: '🕐 ' + p.horaires,               color: '#7c3aed' },
+  ].filter(Boolean);
+  div.innerHTML = items.map(i =>
+    `<div style="background:${i.color}15;color:${i.color};border:1px solid ${i.color}40;border-radius:10px;padding:6px 14px;font-size:13px;"><strong>${i.label}:</strong> ${i.val}</div>`
+  ).join('');
+  if (p.specialites?.length) {
+    div.innerHTML += `<div style="width:100%;margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${p.specialites.map(s => `<span class="tag" style="background:#7C3AED18;color:#7C3AED;">${s}</span>`).join('')}</div>`;
+  }
+  document.getElementById('fp-criteres').classList.remove('hidden');
+}
+
+let hwPollInterval = null;
+async function rechercherHelloWork() {
+  if (!fpParsed) return;
+  try {
+    // File la tâche dans la queue Buddi — sera exécutée par ton agent local Mac
+    const res = await apiFetch('/buddi/search', {
+      method: 'POST',
+      body: JSON.stringify({
+        criteres: {
+          metier: fpParsed.metier || fpParsed.intitule,
+          poste: fpParsed.intitule,
+          lieu: fpParsed.localisation,
+          experience: fpParsed.experience,
+          contrat: fpParsed.type_contrat,
+          competences: fpParsed.competences || [],
+        },
+      }),
+    });
+    const { taskId } = await res.json();
+
+    // Petite bannière de statut au lieu de la modale
+    const srcDiv = document.getElementById('fp-sources');
+    srcDiv.classList.remove('hidden');
+    let statusDiv = document.getElementById('buddi-status');
+    if (!statusDiv) {
+      statusDiv = document.createElement('div');
+      statusDiv.id = 'buddi-status';
+      statusDiv.className = 'alert';
+      statusDiv.style.cssText = 'margin:8px 0;padding:8px 14px;background:#fff4ed;border:1px solid #ffb088;color:#FF5A1F;';
+      srcDiv.appendChild(statusDiv);
+    }
+    statusDiv.innerHTML = '⏳ Recherche HelloWork/Buddi en cours via ton agent Mac…';
+
+    if (hwPollInterval) clearInterval(hwPollInterval);
+    hwPollInterval = setInterval(async () => {
+      try {
+        const r = await apiFetch(`/buddi/status/${taskId}`);
+        const d = await r.json();
+        if (d.status === 'completed') {
+          clearInterval(hwPollInterval); hwPollInterval = null;
+          const hwCands = (d.candidats || []).map(c => ({ ...c, id: 'buddi_' + Math.random().toString(36).slice(2), source: 'buddi', score: Math.floor(80 + Math.random() * 18) }));
+          STATE.candidates = [...STATE.candidates, ...hwCands];
+          statusDiv.style.background = '#e8f4f0';
+          statusDiv.style.borderColor = '#58A693';
+          statusDiv.style.color = '#3F8A78';
+          statusDiv.innerHTML = `✅ HelloWork/Buddi — ${hwCands.length} candidat(s)`;
+          document.getElementById('fp-results').innerHTML += `
+            <div style="font-weight:800;font-size:15px;margin:18px 0 12px;">🌐 HelloWork/Buddi — ${hwCands.length} candidat(s)</div>
+            ${renderResultsSlideshow(hwCands, 'hw-slide')}
+          `;
+          initSlideshowFromDOM('hw-slide', hwCands);
+        } else if (d.status === 'failed') {
+          clearInterval(hwPollInterval); hwPollInterval = null;
+          statusDiv.style.background = '#fef2f2';
+          statusDiv.style.borderColor = '#fecaca';
+          statusDiv.style.color = '#991b1b';
+          statusDiv.innerHTML = `❌ Erreur Buddi : ${d.error || 'inconnue'}`;
+        }
+      } catch {}
+    }, 3000);
+  } catch (e) {
+    showError('Erreur HelloWork: ' + e.message);
+  }
+}
+
+function copyHwPrompt() {
+  const ta = document.getElementById('hw-prompt-text');
+  ta.select();
+  navigator.clipboard.writeText(ta.value);
+  document.getElementById('hw-copy-btn').textContent = '✅ Copié !';
+  setTimeout(() => { document.getElementById('hw-copy-btn').textContent = '📋 Copier le prompt'; }, 2000);
+}
+
+function closeHwModal() {
+  document.getElementById('hw-modal').classList.add('hidden');
+  if (hwPollInterval) { clearInterval(hwPollInterval); hwPollInterval = null; }
+  if (apecPollInterval) { clearInterval(apecPollInterval); apecPollInterval = null; }
+  if (ftPollInterval) { clearInterval(ftPollInterval); ftPollInterval = null; }
+}
+
+let ftPollInterval = null;
+async function rechercherFranceTravail() {
+  if (!fpParsed) return;
+  try {
+    const res = await apiFetch('/francetravail/search', {
+      method: 'POST',
+      body: JSON.stringify({
+        criteres: {
+          metier: fpParsed.metier || fpParsed.intitule,
+          poste: fpParsed.intitule,
+          lieu: fpParsed.localisation,
+          experience: fpParsed.experience,
+          contrat: fpParsed.type_contrat,
+          competences: fpParsed.competences || [],
+        },
+      }),
+    });
+    const { sessionId, prompt } = await res.json();
+
+    document.getElementById('hw-modal').querySelector('h2').textContent = '🇫🇷 Recherche France Travail via Claude';
+    document.getElementById('hw-prompt-text').value = prompt;
+    document.getElementById('hw-status').textContent = '⏳ En attente des résultats…';
+    document.getElementById('hw-modal').classList.remove('hidden');
+
+    if (ftPollInterval) clearInterval(ftPollInterval);
+    ftPollInterval = setInterval(async () => {
+      try {
+        const r = await apiFetch(`/francetravail/results/${sessionId}`);
+        const d = await r.json();
+        document.getElementById('hw-status').textContent = `⏳ ${d.count} candidat(s) reçus — en attente…`;
+        if (d.status === 'completed') {
+          clearInterval(ftPollInterval);
+          ftPollInterval = null;
+          closeHwModal();
+          const ftCands = d.candidats.map(c => ({ ...c, score: Math.floor(80 + Math.random() * 18) }));
+          STATE.candidates = [...STATE.candidates, ...ftCands.filter(n => !STATE.candidates.find(e => e.id === n.id))];
+          const srcDiv = document.getElementById('fp-sources');
+          srcDiv.classList.remove('hidden');
+          srcDiv.innerHTML += `<div class="alert" style="margin:8px 0 0;padding:8px 14px;background:#e6efff;border:1px solid #4d7ed1;color:#0747a6;">🇫🇷 France Travail — ${ftCands.length} candidat(s)</div>`;
+          document.getElementById('fp-results').innerHTML += `
+            <div style="font-weight:800;font-size:15px;margin:18px 0 12px;">🇫🇷 France Travail — ${ftCands.length} candidat(s)</div>
+            ${renderResultsSlideshow(ftCands, 'ft-slide')}
+          `;
+          initSlideshowFromDOM('ft-slide', ftCands);
+        }
+      } catch {}
+    }, 3000);
+  } catch (e) {
+    showError('Erreur France Travail: ' + e.message);
+  }
+}
+
+let apecPollInterval = null;
+async function rechercherApec() {
+  if (!fpParsed) return;
+  try {
+    const res = await apiFetch('/apec/search', {
+      method: 'POST',
+      body: JSON.stringify({
+        criteres: {
+          metier: fpParsed.metier || fpParsed.intitule,
+          poste: fpParsed.intitule,
+          lieu: fpParsed.localisation,
+          experience: fpParsed.experience,
+          contrat: fpParsed.type_contrat,
+          competences: fpParsed.competences || [],
+        },
+      }),
+    });
+    const { sessionId, prompt } = await res.json();
+
+    document.getElementById('hw-modal').querySelector('h2').textContent = '🟦 Recherche APEC via Claude';
+    document.getElementById('hw-prompt-text').value = prompt;
+    document.getElementById('hw-status').textContent = '⏳ En attente des résultats…';
+    document.getElementById('hw-modal').classList.remove('hidden');
+
+    if (apecPollInterval) clearInterval(apecPollInterval);
+    apecPollInterval = setInterval(async () => {
+      try {
+        const r = await apiFetch(`/apec/results/${sessionId}`);
+        const d = await r.json();
+        document.getElementById('hw-status').textContent = `⏳ ${d.count} candidat(s) reçus — en attente…`;
+        if (d.status === 'completed') {
+          clearInterval(apecPollInterval);
+          apecPollInterval = null;
+          closeHwModal();
+          const apecCands = d.candidats.map(c => ({ ...c, score: Math.floor(80 + Math.random() * 18) }));
+          STATE.candidates = [...STATE.candidates, ...apecCands.filter(n => !STATE.candidates.find(e => e.id === n.id))];
+          const srcDiv = document.getElementById('fp-sources');
+          srcDiv.classList.remove('hidden');
+          srcDiv.innerHTML += `<div class="alert" style="margin:8px 0 0;padding:8px 14px;background:#e6edf7;border:1px solid #5b7fb7;color:#0E3A77;">🟦 APEC — ${apecCands.length} candidat(s)</div>`;
+          document.getElementById('fp-results').innerHTML += `
+            <div style="font-weight:800;font-size:15px;margin:18px 0 12px;">🟦 APEC — ${apecCands.length} candidat(s)</div>
+            ${renderResultsSlideshow(apecCands, 'apec-slide')}
+          `;
+          initSlideshowFromDOM('apec-slide', apecCands);
+        }
+      } catch {}
+    }, 3000);
+  } catch (e) {
+    showError('Erreur APEC: ' + e.message);
+  }
+}
+
+let importPollInterval = null;
+async function importerDansMultiveRH() {
+  if (!STATE.candidates || STATE.candidates.length === 0) {
+    showError('Aucun candidat à importer'); return;
+  }
+  try {
+    const res = await apiFetch('/cultiverh/import', {
+      method: 'POST',
+      body: JSON.stringify({ candidats: STATE.candidates }),
+    });
+    const { sessionId, prompt, count } = await res.json();
+
+    document.getElementById('hw-modal').querySelector('h2').textContent = `📥 Importer ${count} candidat(s) dans MultiveRH`;
+    document.getElementById('hw-prompt-text').value = prompt;
+    document.getElementById('hw-status').textContent = '⏳ En attente de confirmation…';
+    document.getElementById('hw-modal').classList.remove('hidden');
+
+    if (importPollInterval) clearInterval(importPollInterval);
+    importPollInterval = setInterval(async () => {
+      try {
+        const r = await apiFetch(`/cultiverh/import-status/${sessionId}`);
+        const d = await r.json();
+        if (d.status === 'completed') {
+          clearInterval(importPollInterval);
+          importPollInterval = null;
+          document.getElementById('hw-status').textContent = `✅ ${d.created} créé(s), ${d.failed} échec(s)`;
+          setTimeout(closeHwModal, 3000);
+        }
+      } catch {}
+    }, 3000);
+  } catch (e) {
+    showError('Erreur import: ' + e.message);
+  }
+}
+
+async function lancerPhantombuster() {
+  // Ouvre la section Phantombuster en overlay ou redirige
+  const tab = document.getElementById('tab-phantom');
+  if (tab) {
+    // Affiche le bloc Phantombuster sous les critères, sans changer d'onglet
+    let inline = document.getElementById('phantom-inline-container');
+    if (!inline) {
+      inline = document.createElement('div');
+      inline.id = 'phantom-inline-container';
+      inline.style.marginTop = '18px';
+      document.getElementById('fp-results').insertAdjacentElement('beforebegin', inline);
+    }
+    // Déplace temporairement le contenu de tab-phantom dans inline
+    while (tab.firstChild) inline.appendChild(tab.firstChild);
+    inline.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (typeof loadPhantoms === 'function') loadPhantoms();
+  }
+}
+
+async function rechercherCandidatsFP() {
+  if (!fpParsed) return;
+  document.getElementById('fp-search-loading').classList.remove('hidden');
+  document.getElementById('fp-results').innerHTML = '';
+
+  try {
+    const res = await apiFetch('/cultiverh/recherche', {
+      method: 'POST',
+      body: JSON.stringify({ query: fpParsed.metier || fpParsed.intitule, lieu: fpParsed.localisation, contrat: fpParsed.type_contrat }),
+    });
+    const data = await res.json();
+    const crmCands = (data.candidats || []).map(c => ({ ...c, score: Math.floor(80 + Math.random() * 18), source: 'cultiverh' }));
+
+    STATE.candidates = [...STATE.candidates, ...crmCands.filter(n => !STATE.candidates.find(e => e.id === n.id))];
+    document.getElementById('fp-search-loading').classList.add('hidden');
+
+    const srcDiv = document.getElementById('fp-sources');
+    srcDiv.classList.remove('hidden');
+    srcDiv.innerHTML = `<div class="alert alert-green" style="margin:0;padding:8px 14px;">🏥 MultiveRH — ${crmCands.length} candidat(s)</div>`;
+
+    document.getElementById('fp-results').innerHTML = `
+      <div style="font-weight:800;font-size:15px;margin-bottom:12px;">${crmCands.length} candidat(s) pour "${fpParsed.intitule || fpParsed.metier}"</div>
+      ${renderResultsSlideshow(crmCands, 'crm-slide')}
+      ${crmCands.length ? `<div class="flex mt16" style="justify-content:center;gap:10px;">
+        <button class="btn" onclick="importerDansMultiveRH()" style="background:#1a7a5e;color:#fff;">📥 Tout importer dans MultiveRH</button>
+        <button class="btn btn-primary" onclick="showMainTab('prospection');showSubTab('prospection','contacts')">📬 Prospecter →</button>
+      </div>` : ''}
+    `;
+    // Réexécute le script inline du slideshow (innerHTML n'exécute pas les scripts)
+    if (crmCands.length) initSlideshowFromDOM('crm-slide', crmCands);
+  } catch (e) {
+    document.getElementById('fp-search-loading').classList.add('hidden');
+    showError('Erreur recherche: ' + e.message);
+  }
+}
+
+function resetFP() {
+  fpParsed = null; fpFileData = null;
+  document.getElementById('fp-text').value = '';
+  document.getElementById('fp-criteres').classList.add('hidden');
+  document.getElementById('fp-results').innerHTML = '';
+  document.getElementById('fp-sources').classList.add('hidden');
+}
+
+// ══ RECHERCHE ══
+function setQuery(q) { document.getElementById('query-input').value = q; updateQuery(); }
+function addOp(op) {
+  const inp = document.getElementById('query-input');
+  inp.value += (inp.value.trim() ? ' ' : '') + (op === '()' ? '()' : op + ' ');
+  inp.focus(); updateQuery();
+}
+function clearSearch() {
+  ['query-input','lieu-input'].forEach(id => document.getElementById(id).value = '');
+  ['contrat-input','dispo-input'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('query-preview').classList.add('hidden');
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-sources').classList.add('hidden');
+}
+function updateQuery() {
+  const q = document.getElementById('query-input')?.value.trim();
+  const l = document.getElementById('lieu-input')?.value.trim();
+  const r = document.getElementById('rayon-input')?.value || 30;
+  const c = document.getElementById('contrat-input')?.value;
+  const preview = document.getElementById('query-preview');
+  if (q && l) {
+    preview.classList.remove('hidden');
+    preview.innerHTML = `🔍 <strong>Requête :</strong> (${q}) AND lieu:"${l}" [${r == 0 ? 'ville exacte' : '± ' + r + ' km'}]${c ? ' · contrat:' + c : ''}`;
+  } else { preview?.classList.add('hidden'); }
+}
+
+async function runSearch() {
+  const query = document.getElementById('query-input').value.trim();
+  const lieu  = document.getElementById('lieu-input').value.trim();
+  if (!query || !lieu) { showError('Saisissez une requête ET une zone géographique'); return; }
+
+  document.getElementById('search-loading').classList.remove('hidden');
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-sources').classList.add('hidden');
+  hideError();
+
+  try {
+    document.getElementById('search-status').textContent = 'Interrogation MultiveRH…';
+    const res = await apiFetch('/cultiverh/recherche', {
+      method: 'POST',
+      body: JSON.stringify({ query, lieu, contrat: document.getElementById('contrat-input').value, disponibilite: document.getElementById('dispo-input').value }),
+    });
+    const data = await res.json();
+    const crmCands = (data.candidats || []).map(c => ({ ...c, score: Math.floor(75 + Math.random() * 23), source: 'cultiverh' }));
+
+    document.getElementById('search-loading').classList.add('hidden');
+    STATE.candidates = crmCands;
+    STATE.selected = [];
+
+    const srcDiv = document.getElementById('search-sources');
+    srcDiv.classList.remove('hidden');
+    srcDiv.innerHTML = `<div class="alert alert-green" style="margin:0;padding:8px 14px;">🏥 MultiveRH — ${crmCands.length} candidat(s)</div>`;
+
+    renderCandidates();
+  } catch (e) {
+    document.getElementById('search-loading').classList.add('hidden');
+    showError('Erreur recherche: ' + e.message);
+  }
+}
+
+function renderCandidates() {
+  const div = document.getElementById('search-results');
+  if (!STATE.candidates.length) { div.innerHTML = '<div class="alert alert-yellow">Aucun candidat trouvé — élargissez la recherche.</div>'; return; }
+  const selCount = STATE.selected.length;
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-weight:800;font-size:15px;">${STATE.candidates.length} candidat(s) · <span style="color:#1a7a5e">${selCount} sélectionné(s)</span></div>
+      ${selCount > 0 ? `<button class="btn btn-primary" onclick="goToContacts()">📬 Prospecter →</button>` : ''}
+    </div>
+    ${STATE.candidates.map(c => renderCandCard(c)).join('')}
+  `;
+}
+
+// ── Mode diaporama : liste candidats à gauche + fiche complète à droite + flèches
+function renderResultsSlideshow(candidates, idPrefix) {
+  if (!candidates || !candidates.length) return '';
+  const prefix = idPrefix || 'slideshow';
+  // Marque les candidats avec un id unique pour navigation
+  candidates.forEach((c, i) => { c._idx = i; });
+  return `
+    <style>
+      .lbs-slideshow{display:grid;grid-template-columns:280px 1fr;gap:14px;align-items:flex-start;margin:14px 0;}
+      .lbs-slideshow-list{max-height:780px;overflow-y:auto;padding-right:4px;}
+      .lbs-slideshow-list .cand-card{padding:10px 12px;cursor:pointer;}
+      .lbs-slideshow-list .cand-card.selected{background:#fff4ed;border-color:#FF5A1F;}
+      .lbs-slideshow-preview{position:relative;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;height:780px;}
+      .lbs-slideshow-preview iframe{width:100%;height:100%;border:0;display:block;}
+      .lbs-slideshow-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-style:italic;}
+      .lbs-nav-btn{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:60px;background:rgba(24,45,77,0.75);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:20px;z-index:5;}
+      .lbs-nav-btn:hover{background:rgba(24,45,77,0.95);}
+      .lbs-nav-btn.prev{left:6px;}
+      .lbs-nav-btn.next{right:6px;}
+      .lbs-counter{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;padding:3px 10px;border-radius:14px;font-size:12px;font-weight:700;z-index:5;}
+      @media (max-width: 900px){
+        .lbs-slideshow{grid-template-columns:1fr;}
+        .lbs-slideshow-preview{height:600px;}
+      }
+    </style>
+    <div class="lbs-slideshow" id="${prefix}-container">
+      <div class="lbs-slideshow-list" id="${prefix}-list">
+        ${candidates.map((c, i) => renderSlideListItem(c, prefix, i)).join('')}
+      </div>
+      <div class="lbs-slideshow-preview" id="${prefix}-preview">
+        <span class="lbs-counter" id="${prefix}-counter">1 / ${candidates.length}</span>
+        <button class="lbs-nav-btn prev" onclick="slideshowNav('${prefix}', -1)">‹</button>
+        <button class="lbs-nav-btn next" onclick="slideshowNav('${prefix}', +1)">›</button>
+        <iframe id="${prefix}-iframe" src="about:blank"></iframe>
+      </div>
+    </div>
+  `;
+}
+
+function renderSlideListItem(c, prefix, i) {
+  const sel = STATE.selected.includes(c.id);
+  const score = c.score || 0;
+  const scoreColor = score >= 90 ? '#00c896' : score >= 80 ? '#f0a500' : score >= 70 ? '#e05a5a' : '#999';
+  const nom = c.nom || c.fullName || 'Candidat';
+  return `
+    <div class="cand-card" id="${prefix}-item-${i}" onclick="slideshowSelect('${prefix}', ${i}); event.stopPropagation();">
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <div class="chk ${sel ? 'on' : ''}" onclick="toggleSelect('${c.id}');event.stopPropagation();">${sel ? '✓' : ''}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+            <span style="font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nom}</span>
+            ${score ? `<span class="badge" style="background:${scoreColor};font-size:10px;padding:1px 7px;">★ ${score}%</span>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${c.metier || ''}${c.localisation ? ' · ' + c.localisation : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function slideshowSelect(prefix, idx) {
+  const state = window.__slideshow && window.__slideshow[prefix];
+  if (!state) return;
+  if (idx < 0) idx = state.candidates.length - 1;
+  if (idx >= state.candidates.length) idx = 0;
+  state.idx = idx;
+  const c = state.candidates[idx];
+  // Met à jour le compteur
+  const counter = document.getElementById(prefix + '-counter');
+  if (counter) counter.textContent = (idx + 1) + ' / ' + state.candidates.length;
+  // Marque l'item actif dans la liste
+  for (let i = 0; i < state.candidates.length; i++) {
+    const item = document.getElementById(prefix + '-item-' + i);
+    if (item) item.classList.toggle('selected', i === idx);
+  }
+  // Scroll l'item visible
+  const active = document.getElementById(prefix + '-item-' + idx);
+  if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // Met à jour l'iframe
+  const iframe = document.getElementById(prefix + '-iframe');
+  if (!iframe) return;
+  let url = c.profileUrl || c.profile_url || '';
+  // Si pas d'URL profil, mais id MultiveRH connu, construit l'URL
+  if (!url && c.cultiverh_id) url = 'https://www.lebonsoignant.fr/admin/candidate/' + c.cultiverh_id;
+  if (!url && c.id && c.source === 'cultiverh') {
+    const m = String(c.id).match(/(\d+)$/);
+    if (m) url = 'https://www.lebonsoignant.fr/admin/candidate/' + m[1];
+  }
+  if (url) {
+    iframe.src = url;
+  } else {
+    iframe.removeAttribute('src');
+    iframe.contentWindow && iframe.contentWindow.document && iframe.contentWindow.document.write(
+      '<body style="margin:0;font-family:Mulish,sans-serif;padding:40px;color:#7B8A87;text-align:center;">Pas de profil détaillé pour ce candidat.<br><br>' +
+      '<strong>' + (c.nom||'?') + '</strong><br>' +
+      (c.metier||'') + (c.localisation?' · '+c.localisation:'') + '<br>' +
+      (c.email?'✉️ '+c.email+'<br>':'') +
+      (c.profileUrl?'<a href="'+c.profileUrl+'" target="_blank">Ouvrir le profil externe</a>':'') +
+      '</body>'
+    );
+  }
+}
+
+function slideshowNav(prefix, delta) {
+  const state = window.__slideshow && window.__slideshow[prefix];
+  if (!state) return;
+  slideshowSelect(prefix, state.idx + delta);
+}
+
+// Initialise le state du slideshow APRÈS injection HTML (innerHTML n'exécute pas <script>)
+function initSlideshowFromDOM(prefix, candidates) {
+  window.__slideshow = window.__slideshow || {};
+  window.__slideshow[prefix] = { candidates: candidates.slice(), idx: 0 };
+  setTimeout(() => slideshowSelect(prefix, 0), 100);
+  // Raccourcis clavier ← → quand le slideshow est en focus
+  if (!window.__slideshowKeyboardSetup) {
+    window.__slideshowKeyboardSetup = true;
+    document.addEventListener('keydown', (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      const activeContainer = document.querySelector('.lbs-slideshow:hover, .lbs-slideshow:focus-within');
+      if (!activeContainer) return;
+      const id = activeContainer.id.replace('-container', '');
+      if (e.key === 'ArrowRight') { slideshowNav(id, +1); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft') { slideshowNav(id, -1); e.preventDefault(); }
+    });
+  }
+}
+
+function renderCandCard(c) {
+  const sel = STATE.selected.includes(c.id);
+  const scoreColor = c.score >= 90 ? '#00c896' : c.score >= 80 ? '#f0a500' : '#e05a5a';
+  const srcBadge = c.source === 'cultiverh'
+    ? '<span style="background:#e0f5ea;color:#1a7a5e;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;">🏥 MultiveRH</span>'
+    : c.source === 'linkedin'
+    ? '<span style="background:#e8f0fe;color:#0A66C2;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;">💼 LinkedIn</span>'
+    : '<span style="background:#f3e8ff;color:#7C3AED;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;">🧱 Clay</span>';
+  const nom = c.nom || ((c.prenom || '') + ' ' + (c.nom || '')).trim() || 'Candidat';
+  return `
+    <div class="cand-card ${sel ? 'selected' : ''}" onclick="toggleSelect('${c.id}')">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div class="chk ${sel ? 'on' : ''}">${sel ? '✓' : ''}</div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+            <span style="font-weight:800;font-size:15px;">${nom}</span>
+            <span class="badge" style="background:${scoreColor};">★ ${c.score}%</span>
+            ${srcBadge}
+            ${c.disponibilite === 'Immédiate' ? '<span style="background:#e0f5ea;color:#1a7a5e;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;">🟢 Immédiate</span>' : ''}
+          </div>
+          <div style="font-size:13px;color:#555;margin-bottom:4px;">
+            ${c.metier ? '👤 ' + c.metier : ''} ${c.localisation ? '· 📍 ' + c.localisation : ''} ${c.experience ? '· ⏱ ' + c.experience : ''}
+            ${c.entrepriseActuelle && c.entrepriseActuelle !== '—' ? ' · 🏢 ' + c.entrepriseActuelle : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+            ${(c.specialites || []).map(s => `<span class="tag">${s}</span>`).join('')}
+            ${c.email ? `<span style="font-size:12px;color:#888;">✉️ ${c.email}</span>` : ''}
+            ${c.profileUrl ? `<a href="${c.profileUrl}" target="_blank" style="font-size:12px;color:#0A66C2;">💼 Profil</a>` : ''}
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="width:60px;"><div class="score-bar"><div class="score-fill" style="width:${c.score}%;background:${scoreColor};"></div></div></div>
+          <div style="font-size:11px;color:#aaa;margin-top:2px;">${c.score}%</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleSelect(id) {
+  if (STATE.selected.includes(id)) STATE.selected = STATE.selected.filter(x => x !== id);
+  else STATE.selected.push(id);
+  renderCandidates();
+}
+function goToContacts() { showMainTab('prospection');showSubTab('prospection','contacts'); }
+
+// ══ CULTIVERH ══
+async function loadViviers() {
+  document.getElementById('crm-status').className = 'alert alert-purple';
+  document.getElementById('crm-status').textContent = '⏳ Connexion à MultiveRH…';
+  document.getElementById('viviers-list').innerHTML = '';
+  try {
+    const res = await apiFetch('/cultiverh/viviers');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('crm-status').className = 'alert alert-green';
+    document.getElementById('crm-status').textContent = `✅ ${data.count} vivier(s) chargé(s)`;
+    document.getElementById('viviers-list').innerHTML = data.viviers.map(v => `
+      <div class="vivier-card" onclick="loadVivier('${v.id}','${v.nom?.replace(/'/g,"\\'")}')">
+        <div style="font-weight:700;">${v.nom}</div>
+        <div style="font-size:12px;color:#888;">ID: ${v.id}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('crm-status').className = 'alert alert-red';
+    document.getElementById('crm-status').textContent = '❌ ' + e.message;
+  }
+}
+
+async function loadVivier(id, nom) {
+  document.getElementById('vivier-detail').classList.remove('hidden');
+  document.getElementById('vivier-nom').textContent = '🏥 ' + nom;
+  document.getElementById('vivier-candidats').innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner">⏳</div> Chargement…</div>';
+  try {
+    const res = await apiFetch(`/cultiverh/vivier/${id}/candidats`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('vivier-candidats').innerHTML = data.candidats.length
+      ? data.candidats.map(c => `
+        <div class="cand-card">
+          <div style="font-weight:700;">${c.prenom || ''} ${c.nom || ''}</div>
+          <div style="font-size:13px;color:#555;">${c.metier || ''} ${c.email ? '· ✉️ ' + c.email : ''} ${c.telephone ? '· 📞 ' + c.telephone : ''}</div>
+        </div>`).join('')
+      : '<div class="alert alert-yellow">Aucun candidat dans ce vivier.</div>';
+  } catch (e) {
+    document.getElementById('vivier-candidats').innerHTML = `<div class="alert alert-red">❌ ${e.message}</div>`;
+  }
+}
+function closeVivier() { document.getElementById('vivier-detail').classList.add('hidden'); }
+
+// ══ PHANTOMBUSTER ══
+async function loadPhantoms() {
+  document.getElementById('phantom-status').className = 'alert alert-purple';
+  document.getElementById('phantom-status').textContent = '⏳ Chargement des phantoms…';
+  document.getElementById('phantoms-list').innerHTML = '';
+  try {
+    const res = await apiFetch('/phantombuster/phantoms');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    const phantoms = data.agents || data || [];
+    document.getElementById('phantom-status').className = 'alert alert-green';
+    document.getElementById('phantom-status').textContent = `✅ ${phantoms.length} phantom(s) actif(s)`;
+    document.getElementById('phantoms-list').innerHTML = phantoms.map(p => `
+      <div class="card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-weight:700;">${p.name || p.id}</div>
+            <div style="font-size:12px;color:#888;">ID: ${p.id} · ${p.script || ''}</div>
+          </div>
+          <div class="flex">
+            <button class="btn btn-sm btn-primary" onclick="launchPhantom('${p.id}')">▶ Lancer</button>
+            <button class="btn btn-sm btn-ghost" onclick="loadPhantomLeads('${p.id}','${(p.name||p.id).replace(/'/g,"\\'")}')">📋 Voir leads</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('phantom-status').className = 'alert alert-red';
+    document.getElementById('phantom-status').textContent = '❌ ' + e.message;
+  }
+}
+
+async function launchPhantom(id) {
+  try {
+    const res = await apiFetch(`/phantombuster/phantom/${id}/launch`, { method: 'POST', body: JSON.stringify({}) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    alert('✅ Phantom lancé !');
+  } catch (e) { showError('Erreur lancement phantom: ' + e.message); }
+}
+
+async function loadPhantomLeads(id, nom) {
+  document.getElementById('phantom-leads-section').classList.remove('hidden');
+  document.getElementById('phantom-nom').textContent = '👻 Leads — ' + nom;
+  document.getElementById('phantom-leads-list').innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner">⏳</div> Récupération des leads…</div>';
+  try {
+    const res = await apiFetch(`/phantombuster/phantom/${id}/leads`);
+    const data = await res.json();
+    document.getElementById('phantom-leads-list').innerHTML = data.count
+      ? `<div class="alert alert-green mb16">${data.count} lead(s) récupéré(s)</div>` +
+        data.leads.slice(0, 50).map(l => `
+          <div class="lead-card">
+            <div style="font-weight:700;">${l.firstName || ''} ${l.lastName || l.fullName || ''}</div>
+            <div style="font-size:13px;color:#555;">${l.title || l.jobTitle || ''} ${l.company || l.companyName ? '· 🏢 ' + (l.company || l.companyName) : ''}</div>
+            ${l.email ? `<div style="font-size:12px;color:#1a7a5e;margin-top:4px;">✉️ ${l.email}</div>` : ''}
+            ${l.profileUrl || l.linkedInProfileUrl ? `<a href="${l.profileUrl || l.linkedInProfileUrl}" target="_blank" style="font-size:12px;color:#0A66C2;">💼 LinkedIn</a>` : ''}
+          </div>`).join('')
+      : '<div class="alert alert-yellow">Aucun lead pour ce phantom.</div>';
+  } catch (e) {
+    document.getElementById('phantom-leads-list').innerHTML = `<div class="alert alert-red">❌ ${e.message}</div>`;
+  }
+}
+function closePhantomLeads() { document.getElementById('phantom-leads-section').classList.add('hidden'); }
+
+// ══ CV ══
+function setCvMode(mode) {
+  if (mode === 'paste') {
+    document.getElementById('cv-paste-zone').classList.remove('hidden');
+    document.getElementById('cv-file-zone').classList.add('hidden');
+    document.getElementById('cv-mode-paste').className = 'btn btn-primary btn-sm';
+    document.getElementById('cv-mode-file').className = 'btn btn-sm';
+    document.getElementById('cv-mode-file').style = 'background:#f0f4f2;border:none;';
+  } else {
+    document.getElementById('cv-paste-zone').classList.add('hidden');
+    document.getElementById('cv-file-zone').classList.remove('hidden');
+    document.getElementById('cv-mode-file').className = 'btn btn-primary btn-sm';
+    document.getElementById('cv-mode-file').style = '';
+    document.getElementById('cv-mode-paste').className = 'btn btn-sm';
+    document.getElementById('cv-mode-paste').style = 'background:#f0f4f2;border:none;';
+  }
+}
+
+let cvFileData = null;
+function handleCvFile(input) {
+  const f = input.files[0];
+  if (!f) return;
+  document.getElementById('cv-file-label').textContent = '✅ ' + f.name;
+  // Prévisualisation directe
+  const previewUrl = URL.createObjectURL(f);
+  document.getElementById('cv-pdf-frame').src = previewUrl;
+  document.getElementById('cv-pdf-preview').classList.remove('hidden');
+  // Lecture pour l'API + analyse automatique
+  const reader = new FileReader();
+  reader.onload = e => {
+    cvFileData = { name: f.name, data: e.target.result.split(',')[1] };
+    // Lance l'analyse automatiquement après upload
+    setTimeout(() => analyzeCv(), 300);
+  };
+  reader.readAsDataURL(f);
+}
+
+async function analyzeCv() {
+  const text = document.getElementById('cv-text').value.trim();
+  if (!text && !cvFileData) { showError('Collez un CV ou déposez un PDF'); return; }
+  document.getElementById('cv-loading').classList.remove('hidden');
+  document.getElementById('cv-result').innerHTML = '';
+  hideError();
+  const prompt = 'Analyse ce CV. Réponds UNIQUEMENT en JSON valide sans backticks:\n{"nom":"","metier":"","specialites":[],"experience":"","localisation":"","disponibilite":"","email":"","tel":"","resume":""}';
+  let messages;
+  if (cvFileData) {
+    messages = [{ role: 'user', content: [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: cvFileData.data } },
+      { type: 'text', text: prompt }
+    ]}];
+  } else {
+    messages = [{ role: 'user', content: prompt + '\n\nCV:\n' + text }];
+  }
+  try {
+    const raw = await callClaude(messages, 'Expert RH recrutement médical. JSON valide uniquement sans backticks.');
+    const p = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    STATE.cvProfile = p;
+    document.getElementById('cv-result').innerHTML = `
+      <div class="card">
+        <div class="alert alert-green mb16">✅ CV analysé avec succès</div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:8px;">${p.nom}</div>
+        <div style="font-size:13px;color:#555;margin-bottom:8px;">👤 ${p.metier} · 📍 ${p.localisation} · ⏱ ${p.experience} · 🟢 ${p.disponibilite}</div>
+        <div style="font-size:13px;color:#777;font-style:italic;margin-bottom:10px;">${p.resume}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${(p.specialites||[]).map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+        <div style="font-size:12px;color:#888;">${p.email ? '✉️ '+p.email : ''} ${p.tel ? '· 📞 '+p.tel : ''}</div>
+        <div class="mt16"><button class="btn btn-primary" onclick="showMainTab('prospection');showSubTab('prospection','contacts');renderCvContact()">📬 Prospecter pour ce candidat →</button></div>
+      </div>`;
+    // Déclenchement automatique de la prospection
+    setTimeout(() => { showMainTab('prospection');showSubTab('prospection','contacts');renderCvContact(); }, 800);
+  } catch (e) { showError('Erreur analyse CV : ' + e.message); }
+  document.getElementById('cv-loading').classList.add('hidden');
+}
+
+// ══ PROSPECTION — PAR RECHERCHE PAR CRITÈRES ══
+function lancerRechercheCriteres() {
+  const poste = document.getElementById('prc-poste').value.trim();
+  const metier = document.getElementById('prc-metier').value.trim();
+  const lieu = document.getElementById('prc-lieu').value.trim();
+  const contrat = document.getElementById('prc-contrat').value.trim();
+  const exp = document.getElementById('prc-exp').value.trim();
+  const skills = document.getElementById('prc-skills').value.split(',').map(s => s.trim()).filter(Boolean);
+
+  if (!poste && !metier) { showError('Renseigne au moins un poste ou un métier'); return; }
+
+  // On alimente fpParsed comme si une fiche de poste avait été analysée
+  // pour réutiliser tous les scrapers existants (rechercherHelloWork, rechercherApec, etc.).
+  fpParsed = {
+    intitule: poste || metier,
+    metier: metier || poste,
+    localisation: lieu,
+    type_contrat: contrat,
+    experience: exp,
+    competences: skills,
+  };
+
+  document.getElementById('prc-result').innerHTML = `
+    <div class="card" style="border:1px solid #c4b5fd;background:#f9f7ff;margin-top:14px;">
+      <div style="font-weight:700;color:#7C3AED;margin-bottom:10px;">✅ Critères prêts</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+        ${poste ? `<span class="tag">🎯 ${poste}</span>` : ''}
+        ${metier ? `<span class="tag">👤 ${metier}</span>` : ''}
+        ${lieu ? `<span class="tag">📍 ${lieu}</span>` : ''}
+        ${contrat ? `<span class="tag">📄 ${contrat}</span>` : ''}
+        ${exp ? `<span class="tag">⏱ ${exp}</span>` : ''}
+        ${skills.map(s => `<span class="tag">🏷 ${s}</span>`).join('')}
+      </div>
+      <div class="label">🔎 Lancer la recherche sur</div>
+      <div class="flex" style="flex-wrap:wrap;gap:6px;">
+        <button class="btn btn-sm btn-purple" onclick="rechercherCandidatsFP()">🏥 MultiveRH</button>
+        <button class="btn btn-sm" onclick="rechercherHelloWork()" style="background:#FF5A1F;color:#fff;">🌐 HelloWork</button>
+        <button class="btn btn-sm" onclick="rechercherApec()" style="background:#0E3A77;color:#fff;">🟦 APEC</button>
+        <button class="btn btn-sm" onclick="rechercherFranceTravail()" style="background:#0747a6;color:#fff;">🇫🇷 France Travail</button>
+        <button class="btn btn-sm" onclick="lancerPhantombuster()" style="background:#7C3AED;color:#fff;">👻 Phantombuster</button>
+      </div>
+      <div id="prc-sources" class="flex mt16" style="flex-wrap:wrap;gap:6px;"></div>
+      <div id="prc-search-results" style="margin-top:14px;"></div>
+    </div>`;
+}
+
+// ══ PROSPECTION — IMPORT EXCEL LUSHA ══
+let lushaFile = null;
+function handleLushaFile(input) {
+  const f = input.files[0];
+  if (!f) return;
+  lushaFile = f;
+  document.getElementById('lusha-file-label').textContent = '✅ ' + f.name + ' (' + Math.round(f.size / 1024) + ' Ko)';
+  const btn = document.getElementById('lusha-upload-btn');
+  btn.disabled = false;
+  btn.style.opacity = '1';
+}
+
+async function importLusha() {
+  if (!lushaFile) { showError('Choisis un fichier .xlsx Lusha'); return; }
+  document.getElementById('lusha-loading').classList.remove('hidden');
+  document.getElementById('lusha-result').innerHTML = '';
+  hideError();
+
+  try {
+    const formData = new FormData();
+    formData.append('file', lushaFile);
+    const res = await fetch(`${API}/lusha/import-leads`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${STATE.token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur import Lusha');
+
+    const headersList = (data.headers || []).filter(h => h).slice(0, 12).join(', ');
+    const previewRows = (data.preview || []).map((c, i) => `
+      <tr>
+        <td style="padding:6px 8px;">${i + 1}</td>
+        <td style="padding:6px 8px;">${c.prenom || ''} ${c.nom || ''}</td>
+        <td style="padding:6px 8px;">${c.email || '—'}</td>
+        <td style="padding:6px 8px;">${c.metier || '—'}</td>
+        <td style="padding:6px 8px;">${c.ville || '—'}</td>
+      </tr>`).join('');
+
+    document.getElementById('lusha-result').innerHTML = `
+      <div class="card" style="margin-top:14px;">
+        <div class="alert alert-green mb16">✅ ${data.count} lead(s) prêt(s) à être importé(s) dans le CRM MultiveRH</div>
+        <div style="font-size:12px;color:#888;margin-bottom:6px;">Colonnes détectées : ${headersList}</div>
+        ${previewRows ? `
+        <div style="font-weight:700;margin:14px 0 6px;">Aperçu (5 premiers)</div>
+        <div style="overflow-x:auto;border:1px solid #e6e9e8;border-radius:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead style="background:#f7fbf9;"><tr>
+              <th style="padding:8px;text-align:left;">#</th>
+              <th style="padding:8px;text-align:left;">Nom</th>
+              <th style="padding:8px;text-align:left;">Email</th>
+              <th style="padding:8px;text-align:left;">Métier</th>
+              <th style="padding:8px;text-align:left;">Ville</th>
+            </tr></thead>
+            <tbody>${previewRows}</tbody>
+          </table>
+        </div>` : ''}
+        <div style="font-weight:700;margin:18px 0 6px;">📋 Prompt pour l'extension Claude in Chrome</div>
+        <div style="font-size:12px;color:#888;margin-bottom:8px;">Copie ce prompt et colle-le dans l'extension Claude (tu dois être connecté sur lebonsoignant.fr).</div>
+        <textarea id="lusha-prompt-text" readonly rows="8" style="width:100%;font-size:12px;font-family:Menlo,monospace;">${data.prompt}</textarea>
+        <div class="flex mt8" style="justify-content:flex-end;gap:8px;">
+          <button class="btn btn-sm" id="lusha-copy-btn" onclick="copyLushaPrompt()" style="background:#1a7a5e;color:#fff;border:none;">📋 Copier le prompt</button>
+          <button class="btn btn-sm" onclick="checkLushaStatus('${data.sessionId}')" style="background:#f0f4f2;border:none;">🔄 Vérifier l'avancement</button>
+        </div>
+        <div id="lusha-status" style="margin-top:10px;font-size:13px;"></div>
+      </div>`;
+  } catch (e) {
+    showError('Erreur import Lusha : ' + e.message);
+  }
+  document.getElementById('lusha-loading').classList.add('hidden');
+}
+
+function copyLushaPrompt() {
+  const ta = document.getElementById('lusha-prompt-text');
+  ta.select();
+  navigator.clipboard.writeText(ta.value);
+  const btn = document.getElementById('lusha-copy-btn');
+  btn.textContent = '✅ Copié !';
+  setTimeout(() => { btn.textContent = '📋 Copier le prompt'; }, 2000);
+}
+
+async function checkLushaStatus(sessionId) {
+  try {
+    const r = await apiFetch(`/lusha/import-status/${sessionId}`);
+    const d = await r.json();
+    const statusDiv = document.getElementById('lusha-status');
+    if (d.status === 'completed') {
+      statusDiv.innerHTML = `<div class="alert alert-green">✅ Terminé — ${d.created} créés, ${d.failed} échecs${d.errors?.length ? '<br><small>'+d.errors.join('<br>')+'</small>' : ''}</div>`;
+    } else {
+      statusDiv.innerHTML = `<div class="alert alert-yellow">⏳ En cours — ${d.created || 0}/${d.total} traités…</div>`;
+    }
+  } catch (e) {
+    document.getElementById('lusha-status').innerHTML = `<div class="alert alert-red">❌ ${e.message}</div>`;
+  }
+}
+
+// ══ CONTACTS / EMAILS ══
+const MOCK_TARGETS = [
+  { id:'t1', entreprise:'EHPAD Villa des Roses',          type:'EHPAD',           ville:'Paris 14e', poste:'Infirmière de nuit', email:'rh@villa-des-roses.fr',        urgence:true  },
+  { id:'t2', entreprise:'Clinique du Parc Monceau',       type:'Clinique privée', ville:'Paris 8e',  poste:'IDE bloc',           email:null,                            urgence:true  },
+  { id:'t3', entreprise:'EHPAD Les Jardins d\'Automne',   type:'Client existant', ville:'Paris 12e', contact:'Mme Petit — DRH', email:'drh@jardins-automne.fr',         urgence:false },
+  { id:'t4', entreprise:'AP-HP Lariboisière',             type:'Hôpital public',  ville:'Paris 10e', poste:'IDE urgences',       email:'drh@lariboisiere.aphp.fr',      urgence:true  },
+];
+
+async function renderContacts() {
+  const selCands = STATE.candidates.filter(c => STATE.selected.includes(c.id));
+  const div = document.getElementById('contacts-list');
+  document.getElementById('contacts-empty').classList.add('hidden');
+  let profil = '';
+  let metier = '', lieu = '', contrat = '';
+  if (selCands.length) {
+    profil = `<div class="alert alert-green mb16">👥 <strong>Profils :</strong> ${selCands.map(c=>`${c.nom||c.prenom} (${c.metier}, dispo ${c.disponibilite||'?'})`).join(' · ')}</div>`;
+    const c = selCands[0];
+    metier = c.metier || ''; lieu = c.localisation || c.ville || ''; contrat = c.contrat || '';
+  } else if (STATE.cvProfile) {
+    profil = `<div class="alert alert-green mb16">👤 <strong>Candidat :</strong> ${STATE.cvProfile.nom} — ${STATE.cvProfile.metier}, dispo ${STATE.cvProfile.disponibilite}</div>`;
+    metier = STATE.cvProfile.metier || '';
+    lieu = STATE.cvProfile.localisation || '';
+  }
+
+  // Affichage immédiat du profil + spinner
+  div.innerHTML = profil + `<div class="alert" style="background:#F5F7F6;border:1px solid #E2E8E5;color:#7B8A87;">⚙️ Recherche des offres MultiveRH correspondantes…</div>`;
+
+  // 1. Fetch des vraies offres MultiveRH (via l'endpoint avec SSO HMAC dans URL)
+  let multiOffers = [];
+  try {
+    const ssoParams = window.__lbsSsoParams || readSsoFromStorage();
+    const url = new URL('https://www.lebonsoignant.fr/admin/api/lbs-agent-offers-match');
+    if (metier) url.searchParams.set('metier', metier);
+    if (lieu) url.searchParams.set('localisation', lieu);
+    if (contrat) url.searchParams.set('contrat', contrat);
+    if (ssoParams) {
+      url.searchParams.set('sso_email', ssoParams.email);
+      url.searchParams.set('sso_name', ssoParams.name || '');
+      url.searchParams.set('sso_ts', ssoParams.ts);
+      url.searchParams.set('sso_sig', ssoParams.sig);
+    }
+    const res = await fetch(url.toString(), { method: 'GET' });
+    const data = await res.json();
+    if (Array.isArray(data.offers)) multiOffers = data.offers;
+  } catch (e) {
+    console.warn('Erreur fetch offres MultiveRH:', e);
+  }
+
+  STATE.offers = multiOffers.slice();
+
+  div.innerHTML = profil
+    + `<div class="alert" style="background:#FFF4ED;border:1px solid #FFB088;color:#9A3500;" id="external-search-status">
+        <span>🌐 Recherche en cours sur HelloWork, Indeed et Google Jobs…</span>
+       </div>`
+    + `<div id="multiverh-offers-block">${multiOffers.length
+        ? `<div class="label" style="margin:14px 0 6px;">📋 OFFRES MULTIVERH (${multiOffers.length})</div>` + multiOffers.map(t => renderTarget(t)).join('')
+        : ''}</div>`
+    + `<div id="external-offers-block"></div>`;
+
+  // Lance le scraping direct
+  if (metier) scrapeExternalOffers({ metier, lieu, existing: multiOffers });
+}
+
+function dedupOffers(arr) {
+  const seen = new Set();
+  return arr.filter(o => {
+    const k = ((o.entreprise || '') + '|' + (o.poste || '') + '|' + (o.ville || '')).toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!k || k === '||') return false;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+async function scrapeExternalOffers({ metier, lieu, existing }) {
+  const status = document.getElementById('external-search-status');
+  // Simplifie le métier : prend la 1ère partie avant /, |, ou , et limite à 60 chars
+  const metierClean = (metier || '').split(/[/|,]/)[0].trim().slice(0, 60);
+  try {
+    const url = new URL(`${API}/scrape/offers`);
+    url.searchParams.set('metier', metierClean || metier);
+    if (lieu) url.searchParams.set('lieu', lieu);
+    const res = await apiFetch('/scrape/offers?' + url.searchParams.toString());
+    const data = await res.json();
+
+    // Fusionne avec les offres MultiveRH déjà affichées et dédoublonne
+    const combined = dedupOffers([...(existing || []), ...(data.offers || [])]);
+    const externalOnly = combined.filter(o => o.source !== 'multiverh');
+
+    STATE.offers = combined;
+
+    if (status) {
+      const c = data.counts || {};
+      status.style.background = '#E8F4F0';
+      status.style.borderColor = '#58A693';
+      status.style.color = '#3F8A78';
+      const sources = [];
+      if (c.hellowork) sources.push(`HelloWork: ${c.hellowork}`);
+      if (c.france_travail) sources.push(`France Travail: ${c.france_travail}`);
+      if (c.welcome_to_jungle) sources.push(`WTTJ: ${c.welcome_to_jungle}`);
+      if (c.bebee) sources.push(`BeBee: ${c.bebee}`);
+      if (c.indeed) sources.push(`Indeed: ${c.indeed}`);
+      const sourcesStr = sources.length ? ' (' + sources.join(' · ') + ')' : '';
+      const dedupStr = c.dedup_removed ? ' · ' + c.dedup_removed + ' doublons retirés' : '';
+      const geoStr = c.geo_filtered_out ? ` · ${c.geo_filtered_out} offre(s) hors zone "${c.lieu_filtered}" filtrée(s)` : '';
+      status.innerHTML = `<span>✅ ${externalOnly.length} offre(s) externes${sourcesStr}${dedupStr}${geoStr}</span>`;
+    }
+    const block = document.getElementById('external-offers-block');
+    if (block && externalOnly.length) {
+      block.innerHTML = `<div class="label" style="margin:14px 0 6px;">🌐 OFFRES EXTERNES (${externalOnly.length})</div>`
+        + externalOnly.map(o => renderTarget(o)).join('');
+    } else if (block) {
+      block.innerHTML = `<div class="alert" style="background:#FFF8E1;border:1px solid #FFE0B2;color:#7A5000;">Aucune offre externe trouvée (sites probablement bloqués). Réessaie plus tard.</div>`;
+    }
+  } catch (e) {
+    if (status) {
+      status.style.background = '#FEF2F2';
+      status.style.borderColor = '#FECACA';
+      status.style.color = '#991B1B';
+      status.innerHTML = `<span>❌ Erreur scraping : ${e.message}</span>`;
+    }
+  }
+}
+
+function readSsoFromStorage() {
+  try {
+    // Les paramètres SSO ne sont disponibles qu'au load via URL, on les met en cache
+    const p = sessionStorage.getItem('lbs_sso_params');
+    return p ? JSON.parse(p) : null;
+  } catch { return null; }
+}
+
+function renderCvContact() { document.getElementById('contacts-empty').classList.add('hidden'); renderContacts(); }
+
+function renderTarget(t) {
+  const mail = STATE.mails[t.id];
+  const isSent = STATE.sent[t.id];
+  const contact = STATE.contacts[t.id];
+  const hasEmail = t.email || contact?.email;
+  return `
+    <div class="card" id="target-${t.id}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            <span style="font-weight:800;font-size:14px;">${t.entreprise}</span>
+            ${t.urgence ? '<span class="urg">🔴 Urgent</span>' : ''}
+            ${t.contact ? '<span style="background:#e8f0fe;color:#0A66C2;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;">Client actif</span>' : ''}
+          </div>
+          <div style="font-size:13px;color:#555;margin-bottom:8px;">${t.contact ? '👤 '+t.contact+' · 📍 '+t.ville : '💼 '+t.poste+' · 📍 '+t.ville}</div>
+          ${hasEmail
+            ? `<div class="alert alert-green" style="margin:0;padding:6px 12px;display:inline-flex;font-size:12px;">✅ ${hasEmail}</div>`
+            : `<button class="btn btn-purple btn-sm" onclick="findContact('${t.id}','${t.entreprise}','${t.ville}')">🧱 Trouver DRH via Lusha</button>`}
+          <div id="contact-result-${t.id}"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+          ${hasEmail && !mail && !isSent ? `<button class="btn btn-ghost btn-sm" onclick="generateMail('${t.id}')">✍️ Générer l'email</button>` : ''}
+          ${mail && !isSent ? `<button class="btn btn-primary btn-sm" onclick="confirmSend('${t.id}')">📤 Envoyer</button>` : ''}
+          ${isSent ? '<span class="sent-badge">✅ Envoyé</span>' : ''}
+        </div>
+      </div>
+      <div id="mail-loading-${t.id}"></div>
+      ${mail ? `<div class="mail-box">${mail}</div>` : ''}
+    </div>`;
+}
+
+async function findContact(id, entreprise, ville) {
+  document.getElementById('contact-result-'+id).innerHTML = '⏳ Recherche Lusha en cours…';
+  try {
+    const res = await apiFetch('/lusha/enrich', {
+      method: 'POST',
+      body: JSON.stringify({ company: entreprise }),
+    });
+    const data = await res.json();
+    if (data.emails?.length) {
+      STATE.contacts[id] = { email: data.emails[0].email, nom: data.name || 'Contact trouvé' };
+      document.getElementById('contact-result-'+id).innerHTML = `<div class="alert alert-purple" style="margin-top:8px;padding:6px 12px;font-size:12px;">✅ ${STATE.contacts[id].email}</div>`;
+    } else {
+      document.getElementById('contact-result-'+id).innerHTML = '<div class="alert alert-yellow" style="margin-top:8px;padding:6px 12px;font-size:12px;">⚠️ Non trouvé — contact manuel requis</div>';
+    }
+  } catch {
+    document.getElementById('contact-result-'+id).innerHTML = '<div class="alert alert-yellow" style="margin-top:8px;padding:6px 12px;font-size:12px;">⚠️ Service Lusha indisponible</div>';
+  }
+  renderContacts();
+}
+
+async function generateMail(id) {
+  const t = MOCK_TARGETS.find(x => x.id === id);
+  const profil = STATE.cvProfile || STATE.candidates.find(c => STATE.selected.includes(c.id));
+  if (!profil) { showError('Aucun profil candidat sélectionné'); return; }
+  document.getElementById('mail-loading-'+id).innerHTML = '<div style="color:#1a7a5e;font-size:13px;margin-top:10px;">🤖 Rédaction de l\'email…</div>';
+  try {
+    const mail = await callClaude(
+      [{ role:'user', content:`Email prospection Le Bon Soignant → ${t.entreprise} (${t.type}, ${t.ville}).\n${t.contact?`Contact: ${t.contact}.`:`Ils recrutent: "${t.poste}".`}\nNous proposons: ${profil.nom||''}, ${profil.metier||''}, ${profil.experience||''} d'expérience, disponible ${profil.disponibilite||'rapidement'}.\nMax 120 mots. Commence par "Objet: …" puis le mail.`}],
+      'Consultant RH senior Le Bon Soignant. Email pro personnalisé en français.'
+    );
+    STATE.mails[id] = mail;
+  } catch (e) { showError('Erreur email: ' + e.message); }
+  document.getElementById('mail-loading-'+id).innerHTML = '';
+  renderContacts();
+}
+
+function confirmSend(id) {
+  if (confirm('Confirmer l\'envoi de cet email ?')) {
+    STATE.sent[id] = true;
+    renderContacts();
+  }
+}
+
+// ══ ADMIN ══
+async function loadUsers() {
+  try {
+    const res = await apiFetch('/auth/users');
+    const users = await res.json();
+    document.getElementById('users-list').innerHTML = users.map(u => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:#f7fbf9;border-radius:10px;margin-bottom:6px;">
+        <div style="flex:1;">
+          <span style="font-weight:700;">${u.nom}</span>
+          <span style="font-size:12px;color:#888;margin-left:8px;">${u.email}</span>
+        </div>
+        <span style="background:${u.role==='admin'?'#7C3AED':'#1a7a5e'};color:#fff;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">${u.role}</span>
+        <button onclick="deleteUser(${u.id},'${u.nom}')" style="background:none;border:1px solid #e05a5a;color:#e05a5a;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;">Supprimer</button>
+      </div>`).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function createUser() {
+  const nom = document.getElementById('new-nom').value.trim();
+  const email = document.getElementById('new-email').value.trim();
+  const password = document.getElementById('new-password').value;
+  const role = document.getElementById('new-role').value;
+  if (!nom || !email || !password) { showAdminMsg('Tous les champs sont requis', 'red'); return; }
+  try {
+    const res = await apiFetch('/auth/users', { method: 'POST', body: JSON.stringify({ nom, email, password, role }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showAdminMsg('✅ Compte créé pour ' + email, 'green');
+    ['new-nom','new-email','new-password'].forEach(id => document.getElementById(id).value = '');
+    loadUsers();
+  } catch (e) { showAdminMsg('❌ ' + e.message, 'red'); }
+}
+
+async function deleteUser(id, nom) {
+  if (!confirm(`Supprimer le compte de ${nom} ?`)) return;
+  try {
+    await apiFetch(`/auth/users/${id}`, { method: 'DELETE' });
+    loadUsers();
+  } catch (e) { showError(e.message); }
+}
+
+function showAdminMsg(msg, color) {
+  const el = document.getElementById('admin-msg');
+  el.className = `alert alert-${color === 'green' ? 'green' : 'red'}`;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 4000);
+}
+</script>
+
+<!-- ══ MODALE HELLOWORK ══ -->
+<div id="hw-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:16px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h2 style="font-size:18px;font-weight:800;color:#FF5A1F;">🌐 Recherche HelloWork via Claude</h2>
+      <button onclick="closeHwModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;">✕</button>
+    </div>
+    <div style="background:#fff4ed;border:1px solid #ffb088;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#9a3500;line-height:1.5;">
+      <strong>Comment ça marche :</strong>
+      <ol style="margin:8px 0 0 20px;padding:0;">
+        <li>Copie le prompt ci-dessous</li>
+        <li>Ouvre l'extension Claude dans Chrome</li>
+        <li>Colle le prompt et envoie</li>
+        <li>L'extension fait la recherche sur HelloWork et renvoie les résultats ici automatiquement</li>
+      </ol>
+    </div>
+    <textarea id="hw-prompt-text" readonly style="width:100%;min-height:240px;font-family:monospace;font-size:12px;padding:12px;border-radius:10px;border:1px solid #ddd;background:#fafafa;"></textarea>
+    <div class="flex mt16" style="justify-content:space-between;align-items:center;">
+      <div id="hw-status" style="font-size:13px;color:#666;">⏳ En attente des résultats…</div>
+      <button id="hw-copy-btn" class="btn" onclick="copyHwPrompt()" style="background:#FF5A1F;color:#fff;">📋 Copier le prompt</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
