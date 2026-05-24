@@ -490,12 +490,26 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
         </div>
       </div>
 
-      <div id="ia-loading" class="hidden card" style="text-align:center;padding:30px;">
-        <div class="spinner" style="font-size:36px;">🔍</div>
-        <div style="font-weight:700;color:var(--brand);margin-top:10px;" id="ia-loading-text">Analyse en cours…</div>
-      </div>
+      <!-- Layout split-screen : CV à gauche, résultats à droite (s'active dès qu'un CV est déposé) -->
+      <div id="ia-split" style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;">
+        <!-- Panneau CV (gauche) -->
+        <div id="ia-cv-panel" class="hidden card" style="flex:1;min-width:340px;max-width:50%;padding:8px;display:flex;flex-direction:column;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);margin-bottom:6px;">
+            <div style="font-weight:700;color:var(--brand);font-size:13px;">📄 <span id="ia-cv-filename">CV</span></div>
+            <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;background:#f5f5f5;color:#666;" onclick="ia_clearCv()" title="Fermer">✕</button>
+          </div>
+          <div id="ia-cv-viewer" style="flex:1;min-height:600px;overflow:hidden;border-radius:6px;background:#fafafa;"></div>
+        </div>
 
-      <div id="ia-results"></div>
+        <!-- Panneau résultats (droite) -->
+        <div id="ia-right-panel" style="flex:1;min-width:340px;display:flex;flex-direction:column;gap:14px;">
+          <div id="ia-loading" class="hidden card" style="text-align:center;padding:30px;">
+            <div class="spinner" style="font-size:36px;">🔍</div>
+            <div style="font-weight:700;color:var(--brand);margin-top:10px;" id="ia-loading-text">Analyse en cours…</div>
+          </div>
+          <div id="ia-results"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ══ CLAY ══ -->
@@ -792,6 +806,10 @@ async function ia_handleCvFile(input) {
   if (!f) return;
   const status = document.getElementById('ia-cv-status');
   status.textContent = '⏳ Analyse du CV…';
+
+  // Affiche immédiatement le CV à gauche
+  ia_displayCv(f);
+
   const reader = new FileReader();
   reader.onload = async e => {
     const data = e.target.result.split(',')[1];
@@ -822,6 +840,51 @@ async function ia_handleCvFile(input) {
     }
   };
   reader.readAsDataURL(f);
+}
+
+// ── Affiche le CV (PDF) dans le panneau de gauche ──
+function ia_displayCv(file) {
+  const panel = document.getElementById('ia-cv-panel');
+  const viewer = document.getElementById('ia-cv-viewer');
+  const filename = document.getElementById('ia-cv-filename');
+  if (!panel || !viewer) return;
+
+  // Révoque l'ancien objectURL s'il existait
+  if (window.__iaCvObjectUrl) {
+    URL.revokeObjectURL(window.__iaCvObjectUrl);
+  }
+  const url = URL.createObjectURL(file);
+  window.__iaCvObjectUrl = url;
+
+  filename.textContent = file.name;
+
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    viewer.innerHTML = `<embed src="${url}#toolbar=1&navpanes=0" type="application/pdf" style="width:100%;height:100%;min-height:600px;border:none;">`;
+  } else {
+    // Texte brut
+    const reader = new FileReader();
+    reader.onload = e => {
+      viewer.innerHTML = `<pre style="padding:14px;font-size:12px;line-height:1.5;white-space:pre-wrap;color:var(--navy);margin:0;">${(e.target.result || '').replace(/</g,'&lt;')}</pre>`;
+    };
+    reader.readAsText(file);
+  }
+  panel.classList.remove('hidden');
+}
+
+// ── Ferme le panneau CV ──
+function ia_clearCv() {
+  const panel = document.getElementById('ia-cv-panel');
+  const viewer = document.getElementById('ia-cv-viewer');
+  if (window.__iaCvObjectUrl) {
+    URL.revokeObjectURL(window.__iaCvObjectUrl);
+    window.__iaCvObjectUrl = null;
+  }
+  if (viewer) viewer.innerHTML = '';
+  if (panel) panel.classList.add('hidden');
+  // Reset l'input file pour permettre re-upload du même fichier
+  const input = document.getElementById('ia-cv-file');
+  if (input) input.value = '';
+  document.getElementById('ia-cv-status').textContent = '';
 }
 
 async function lancerProspectionIA() {
@@ -877,7 +940,7 @@ function renderProspectionResults(data) {
     if (cs.length === 0) {
       html += `<div style="font-style:italic;color:var(--muted);font-size:13px;">Aucun résultat sur ce tier.</div>`;
     } else {
-      html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;">`;
+      html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">`;
       for (let ci = 0; ci < cs.length; ci++) {
         const c = cs[ci];
         const cid = `card-${ti}-${ci}`;
