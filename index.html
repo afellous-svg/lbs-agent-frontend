@@ -320,15 +320,10 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
 
     </div><!-- /tab-recherche -->
 
-    <!-- ══ ONGLET PRINCIPAL : PROSPECTION ══ -->
+    <!-- ══ ONGLET PRINCIPAL : PROSPECTION (uniquement Prospection IA) ══ -->
     <div id="tab-prospection" class="hidden">
       <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);">
-        <button class="sub-tab active" onclick="showSubTab('prospection','cv')" id="sub-prospection-cv">📄 Par CV candidat</button>
-        <button class="sub-tab" onclick="showSubTab('prospection','cv-criteres')" id="sub-prospection-cv-criteres">🔍 Par recherche</button>
-        <button class="sub-tab" onclick="showSubTab('prospection','cv-lusha')" id="sub-prospection-cv-lusha">📊 Import Lusha</button>
-        <button class="sub-tab" onclick="showSubTab('prospection','ia')" id="sub-prospection-ia">🎯 Prospection IA</button>
-        <button class="sub-tab" onclick="showSubTab('prospection','clay')" id="sub-prospection-clay">🧱 Enrichir via Clay</button>
-        <button class="sub-tab" onclick="showSubTab('prospection','contacts')" id="sub-prospection-contacts">📬 Emails de prospection</button>
+        <button class="sub-tab active" onclick="showSubTab('prospection','ia')" id="sub-prospection-ia">🎯 Prospection IA</button>
       </div>
 
     <!-- ══ PHANTOMBUSTER (caché, repris dans le bouton inline) ══ -->
@@ -925,6 +920,7 @@ function renderProspectionResults(data) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-purple btn-sm" onclick="ia_enrichAll('drh')" title="Cherche DRH/RRH gratuitement via Google + déduit pattern email">⚡ Tout enrichir (DRH gratuit)</button>
         <button class="btn btn-purple btn-sm" onclick="ia_enrichAll('compta')" title="Cherche DAF/Resp Compta">⚡ Tout enrichir (Compta)</button>
+        <button class="btn btn-warn btn-sm" onclick="ia_genererEmailing()" title="Génère un mailing avec tous les contacts enrichis">✉️ Générer emailing</button>
         <button class="btn btn-purple btn-sm" onclick="ia_exportCsv()">📥 Exporter CSV</button>
         <button class="btn btn-primary btn-sm" onclick="ia_creerVivier()">🎯 Créer vivier MultiveRH</button>
       </div>
@@ -1161,6 +1157,179 @@ async function ia_lushaPhone(tierIdx, cIdx, role, contactIdx) {
   }
 }
 
+// ── Génère un emailing avec TOUS les contacts enrichis (DRH + Compta + Direction) ──
+async function ia_genererEmailing() {
+  const data = window.__iaResultsData;
+  if (!data) { alert('Aucune prospection chargée'); return; }
+
+  // Collecte tous les emails à travers toutes les sociétés et tous les rôles
+  const recipients = [];
+  for (const tier of data.tiers) {
+    for (const c of (tier.companies || [])) {
+      if (!c.__enrich) continue;
+      for (const role of Object.keys(c.__enrich)) {
+        const enrich = c.__enrich[role];
+        const contacts = enrich.emails_generated?.length ? enrich.emails_generated : enrich.people || [];
+        for (const p of contacts) {
+          if (p.email && p.email_valid !== false) {
+            recipients.push({
+              email: p.email,
+              first_name: p.first_name,
+              last_name: p.last_name,
+              title: p.title || '',
+              company: c.name,
+              tier: tier.tier,
+              role,
+              email_source: p.email_source || enrich.pattern_source || '',
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (!recipients.length) {
+    alert('Aucun email collecté.\n\nLance d\'abord "⚡ Tout enrichir (DRH/Compta)" sur les sociétés pour générer leurs emails.');
+    return;
+  }
+
+  // Dédup par email
+  const dedup = new Map();
+  for (const r of recipients) {
+    if (!dedup.has(r.email)) dedup.set(r.email, r);
+  }
+  const uniqueRecipients = Array.from(dedup.values());
+
+  ia_openEmailingModal(uniqueRecipients, data);
+}
+
+function ia_openEmailingModal(recipients, data) {
+  // Détection métier/lieu du CV pour préparer le template
+  const metier = data.metier || '';
+  const lieu = data.lieu || '';
+
+  // Templates par défaut selon le contexte
+  const defaultSubject = `Profil ${metier} disponible${lieu ? ' sur ' + lieu : ''}`;
+  const defaultBody = `Bonjour {prenom},
+
+Je me permets de vous contacter car je dispose actuellement d'un profil expérimenté de **${metier}**${lieu ? ' basé sur ' + lieu : ''} en recherche active d'opportunités.
+
+Vous trouverez ci-joint son CV anonymisé. N'hésitez pas à me solliciter pour échanger sur le profil ou organiser un entretien.
+
+Bien à vous,
+
+Tarik Afellous
+Le Bon Soignant — Cabinet de recrutement médical
+contact@lebonsoignant.fr · 01 XX XX XX XX`;
+
+  // Construit la modale
+  const existing = document.getElementById('emailing-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'emailing-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;max-width:880px;width:100%;max-height:90vh;overflow:auto;padding:22px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:18px;font-weight:800;color:var(--brand);">✉️ Emailing — ${recipients.length} destinataire(s) unique(s)</div>
+        <button onclick="document.getElementById('emailing-modal').remove()" style="background:#f5f5f5;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;">✕</button>
+      </div>
+
+      <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#9a3412;">
+        📌 Le mailing sera envoyé via MultiveRH (campagne email standard). Les variables <code>{prenom}</code> <code>{nom}</code> <code>{societe}</code> seront remplacées automatiquement par destinataire.
+      </div>
+
+      <div class="label">Objet</div>
+      <input type="text" id="email-subject" value="${defaultSubject.replace(/"/g,'&quot;')}" style="width:100%;margin-bottom:12px;">
+
+      <div class="label">Message (utilise {prenom}, {nom}, {societe})</div>
+      <textarea id="email-body" style="width:100%;min-height:240px;font-family:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:6px;">${defaultBody}</textarea>
+
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer;color:var(--brand);font-weight:600;">📋 Voir les ${recipients.length} destinataires</summary>
+        <div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:6px;font-size:11px;">
+          ${recipients.map((r,i) => `<div style="padding:4px 6px;border-bottom:1px solid #f0f0f0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div><strong>${r.first_name} ${r.last_name}</strong> · ${r.title}</div>
+            <div style="color:#2a8a72;">${r.email}</div>
+            <div style="color:var(--muted);">${r.company} (T${r.tier}, ${r.role})</div>
+          </div>`).join('')}
+        </div>
+      </details>
+
+      <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
+        <button class="btn btn-purple" onclick="ia_emailingDownloadCsv()">📥 Exporter CSV destinataires</button>
+        <button class="btn btn-primary" onclick="ia_emailingSendViaMultiveRH()">📤 Envoyer via MultiveRH</button>
+        <button class="btn" style="background:#f5f5f5;color:#666;" onclick="ia_emailingOpenInMailto()">✉️ Ouvrir dans mon client mail (limité)</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  window.__iaEmailingRecipients = recipients;
+}
+
+// Export destinataires en CSV (utilisable dans n'importe quel outil emailing : Mailjet, Brevo, Lemlist...)
+function ia_emailingDownloadCsv() {
+  const recipients = window.__iaEmailingRecipients || [];
+  const rows = [['email','prenom','nom','titre','societe','tier','role','source_email']];
+  for (const r of recipients) {
+    rows.push([r.email, r.first_name, r.last_name, r.title, r.company, 'Tier '+r.tier, r.role, r.email_source]);
+  }
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `emailing-${Date.now()}.csv`;
+  a.click();
+}
+
+// Envoi via MultiveRH (campagne email)
+async function ia_emailingSendViaMultiveRH() {
+  const recipients = window.__iaEmailingRecipients || [];
+  const subject = document.getElementById('email-subject').value.trim();
+  const body = document.getElementById('email-body').value.trim();
+  if (!subject || !body) return alert('Renseigne objet + message');
+  if (!recipients.length) return alert('Aucun destinataire');
+  if (!confirm(`Envoyer le mailing à ${recipients.length} destinataire(s) ?\n\nObjet : "${subject}"`)) return;
+
+  const baseHost = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
+    ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi…'; }
+  try {
+    const r = await fetch(`https://${baseHost}/admin/api/companycontact-emailing-send`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, body, recipients }),
+    });
+    const out = await r.json();
+    if (out.ok) {
+      alert(`✅ Mailing envoyé à ${out.sent || recipients.length} destinataire(s)`);
+      document.getElementById('emailing-modal').remove();
+    } else {
+      alert('❌ ' + (out.error || 'erreur'));
+    }
+  } catch (e) {
+    alert('⚠️ L\'endpoint MultiveRH n\'est pas encore configuré.\n\nUtilise pour l\'instant "📥 Exporter CSV" pour envoyer via Mailjet/Brevo/Lemlist.\n\nErreur : ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📤 Envoyer via MultiveRH'; }
+  }
+}
+
+// Fallback : ouvrir mailto (limité à ~30 destinataires selon client mail)
+function ia_emailingOpenInMailto() {
+  const recipients = window.__iaEmailingRecipients || [];
+  const subject = document.getElementById('email-subject').value.trim();
+  const body = document.getElementById('email-body').value.trim();
+  if (recipients.length > 50) {
+    if (!confirm(`Tu as ${recipients.length} destinataires — la plupart des clients mail limitent à ~50 BCC.\n\nIl est conseillé d'utiliser "Exporter CSV" + un outil pro (Brevo, Mailjet, Lemlist).\n\nOuvrir quand même ?`)) return;
+  }
+  const bcc = recipients.map(r => r.email).join(',');
+  const url = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = url;
+}
+
 // ── Enrichit TOUTES les sociétés affichées (batch, sequential) ──
 async function ia_enrichAll(role) {
   const data = window.__iaResultsData;
@@ -1301,7 +1470,7 @@ async function clayImport(input) {
 function showSubTab(parent, sub) {
   const subContainers = {
     recherche: ['fiche', 'search'],
-    prospection: ['cv', 'cv-criteres', 'cv-lusha', 'ia', 'clay', 'contacts'],
+    prospection: ['ia'],
   };
   (subContainers[parent] || []).forEach(s => {
     const el = document.getElementById('tab-' + s);
