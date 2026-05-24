@@ -964,9 +964,9 @@ function renderProspectionResults(data) {
         html += `<div id="${cid}" style="background:#fafdfc;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;">
           <div style="font-weight:700;color:var(--navy);margin-bottom:3px;">${c.name || ''}</div>
           <div style="color:var(--muted);">${c.city || c.ville || ''} ${c.zipcode ? '· '+c.zipcode : ''}</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;align-items:center;">
             ${c.website ? `<a href="${c.website}" target="_blank" style="color:#58A693;">🌐 site</a>` : ''}
-            ${c.sirene_url ? `<a href="${c.sirene_url}" target="_blank" style="color:#7B8A87;font-size:11px;">SIRENE</a>` : ''}
+            <span id="phone-${cid}">${c.phone ? `<a href="tel:${c.phone.replace(/[^+\d]/g,'')}" style="color:var(--brand);font-weight:600;">📞 ${c.phone}</a>` : `<a href="#" onclick="event.preventDefault();ia_findPhone(${ti},${ci})" style="color:#7B8A87;font-size:11px;border:1px dashed #aaa;padding:1px 5px;border-radius:3px;">📞 Trouver tel</a>`}</span>
           </div>
           ${c.offer_title ? `<div style="color:#FF5A1F;font-size:11px;margin-top:3px;position:relative;" class="offer-tooltip-wrapper">
             ${c.offer_url ? `<a href="${c.offer_url}" target="_blank" style="color:#FF5A1F;text-decoration:none;">📋 ${c.offer_title}</a>` : `📋 ${c.offer_title}`}
@@ -1346,6 +1346,30 @@ function ia_emailingOpenInMailto() {
   const bcc = recipients.map(r => r.email).join(',');
   const url = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = url;
+}
+
+// ── Trouve le téléphone d'une société à la demande (Google, gratuit) ──
+async function ia_findPhone(tierIdx, cIdx) {
+  const data = window.__iaResultsData;
+  const c = data?.tiers?.[tierIdx]?.companies?.[cIdx];
+  if (!c) return;
+  const span = document.getElementById(`phone-${c.__cardId}`);
+  if (span) span.innerHTML = `<span style="font-size:11px;color:var(--muted);">⏳…</span>`;
+  try {
+    const r = await apiFetch('/prospection/find-phone', {
+      method: 'POST',
+      body: JSON.stringify({ company_name: c.name, city: c.city || c.ville || '' }),
+    });
+    const d = await r.json();
+    if (d.phone) {
+      c.phone = d.phone;
+      if (span) span.innerHTML = `<a href="tel:${d.phone.replace(/[^+\d]/g,'')}" style="color:var(--brand);font-weight:600;">📞 ${d.phone}</a>`;
+    } else if (span) {
+      span.innerHTML = `<span style="font-size:11px;color:#a87;">📞 Non trouvé</span>`;
+    }
+  } catch (e) {
+    if (span) span.innerHTML = `<span style="font-size:11px;color:#c00;">❌</span>`;
+  }
 }
 
 // ── Enrichissement intelligent : DRH + responsable de service détecté depuis le métier ──
