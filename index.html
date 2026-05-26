@@ -174,9 +174,10 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
           <div style="background:#f5f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#5b21b6;">
             📋 <strong>Sourcing par fiche de poste</strong>
           </div>
-          <div class="flex mb16">
+          <div class="flex mb16" style="flex-wrap:wrap;">
             <button class="btn btn-purple btn-sm" id="fp-mode-paste-btn" onclick="setFpMode('paste')">📝 Coller</button>
             <label for="fp-file-input" class="btn btn-sm" id="fp-mode-file-btn" onclick="setFpMode('file')" style="background:#f0f4f2;border:none;cursor:pointer;">📎 PDF</label>
+            <button class="btn btn-sm" id="fp-mode-multiverh-btn" onclick="setFpMode('multiverh');fp_ouvrirSelecteurOffres()" style="background:#58A693;color:#fff;border:none;cursor:pointer;">🏥 Choisir dans MultiveRH</button>
             <input type="file" id="fp-file-input" accept=".pdf,.txt" style="display:none;" onchange="handleFpFile(this)"/>
           </div>
           <div id="fp-paste-zone">
@@ -1738,6 +1739,107 @@ function setFpMode(m) {
   document.getElementById('fp-mode-paste-btn').style = m === 'paste' ? '' : 'background:#f0f4f2;border:none;';
   document.getElementById('fp-mode-file-btn').className  = 'btn btn-sm' + (m === 'file'  ? ' btn-purple' : '');
   document.getElementById('fp-mode-file-btn').style  = m === 'file'  ? '' : 'background:#f0f4f2;border:none;';
+  const mvBtn = document.getElementById('fp-mode-multiverh-btn');
+  if (mvBtn) {
+    mvBtn.style = m === 'multiverh' ? 'background:#2a8a72;color:#fff;border:none;' : 'background:#58A693;color:#fff;border:none;';
+  }
+}
+
+// ── Sélecteur d'offres MultiveRH ──
+async function fp_ouvrirSelecteurOffres() {
+  // Modale
+  const existing = document.getElementById('fp-mv-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'fp-mv-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;padding:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:18px;font-weight:800;color:var(--brand);">🏥 Choisir une offre dans MultiveRH</div>
+        <button onclick="document.getElementById('fp-mv-modal').remove()" style="background:#f5f5f5;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;">✕</button>
+      </div>
+      <input type="text" id="fp-mv-search" placeholder="🔎 Filtrer (titre, lieu, contrat...)" oninput="fp_filtrerOffres()" style="width:100%;padding:8px 12px;margin-bottom:10px;border:1px solid var(--border);border-radius:6px;">
+      <div id="fp-mv-list" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;">
+        <div style="text-align:center;padding:30px;color:var(--muted);"><span class="spinner">⏳</span> Chargement des offres MultiveRH…</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Récupère les offres depuis MultiveRH
+  const baseHost = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
+    ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
+  try {
+    const r = await fetch(`https://${baseHost}/admin/api/job-offers-list`, {
+      credentials: 'include',
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    window.__fpMvOffers = data.offers || [];
+    fp_afficherOffres(window.__fpMvOffers);
+  } catch (e) {
+    document.getElementById('fp-mv-list').innerHTML = `<div style="padding:20px;color:#c00;">❌ Impossible de charger les offres : ${e.message}<br><br>Vérifie que tu es connecté à MultiveRH (<a href="https://${baseHost}/admin" target="_blank">${baseHost}/admin</a>).</div>`;
+  }
+}
+
+function fp_afficherOffres(offers) {
+  const list = document.getElementById('fp-mv-list');
+  if (!offers.length) {
+    list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);">Aucune offre disponible</div>`;
+    return;
+  }
+  let html = '';
+  for (const o of offers) {
+    const safe = (s) => (s || '').toString().replace(/"/g, '&quot;');
+    html += `<div onclick="fp_choisirOffre(${o.id})" style="border-bottom:1px solid #eee;padding:10px 12px;cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+      <div style="font-weight:700;color:var(--navy);">${safe(o.title)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">
+        ${o.contract ? `<span style="background:#fff5ed;color:#d04a13;padding:1px 6px;border-radius:3px;margin-right:5px;">${safe(o.contract)}</span>` : ''}
+        ${o.location ? `📍 ${safe(o.location)} ` : ''}
+        ${o.created_at ? `· ${o.created_at.slice(0,10)}` : ''}
+      </div>
+      ${o.description ? `<div style="font-size:11px;color:#666;margin-top:4px;line-height:1.4;">${safe(o.description).slice(0, 200)}…</div>` : ''}
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+
+function fp_filtrerOffres() {
+  const q = (document.getElementById('fp-mv-search').value || '').toLowerCase().trim();
+  if (!window.__fpMvOffers) return;
+  if (!q) return fp_afficherOffres(window.__fpMvOffers);
+  const filtered = window.__fpMvOffers.filter(o => {
+    return JSON.stringify(o).toLowerCase().includes(q);
+  });
+  fp_afficherOffres(filtered);
+}
+
+function fp_choisirOffre(id) {
+  const offer = (window.__fpMvOffers || []).find(o => o.id === id);
+  if (!offer) return;
+
+  // Construit le texte de la fiche pour l'analyse Claude
+  const fullText = [
+    offer.title ? `Poste : ${offer.title}` : '',
+    offer.location ? `Lieu : ${offer.location}` : '',
+    offer.contract ? `Contrat : ${offer.contract}` : '',
+    offer.salary ? `Salaire : ${offer.salary}` : '',
+    offer.experience ? `Expérience : ${offer.experience}` : '',
+    '',
+    offer.description || '',
+    '',
+    offer.profile_recherche ? `Profil recherché :\n${offer.profile_recherche}` : '',
+    offer.missions ? `Missions :\n${offer.missions}` : '',
+  ].filter(Boolean).join('\n');
+
+  // Bascule en mode "paste" + remplit le texte
+  setFpMode('paste');
+  document.getElementById('fp-text').value = fullText;
+  // Ferme la modale
+  document.getElementById('fp-mv-modal').remove();
+  // Lance l'analyse direct
+  analyserFiche();
 }
 
 let fpFileData = null, fpParsed = null;
