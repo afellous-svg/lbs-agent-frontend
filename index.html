@@ -484,9 +484,10 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
 
         <div style="margin-top:14px;text-align:center;color:var(--muted);font-size:12px;">— ou bien —</div>
 
-        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
+        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <label for="ia-cv-file" class="btn btn-purple" style="cursor:pointer;">📎 Déposer un CV (auto-détection)</label>
           <input type="file" id="ia-cv-file" accept=".pdf,.txt" style="display:none;" onchange="ia_handleCvFile(this)">
+          <button class="btn" style="background:#58A693;color:#fff;border:none;cursor:pointer;" onclick="ia_ouvrirSelecteurCandidats()">🏥 Choisir un CV dans MultiveRH</button>
           <span id="ia-cv-status" style="font-size:12px;color:var(--muted);"></span>
         </div>
       </div>
@@ -841,6 +842,99 @@ async function ia_handleCvFile(input) {
     }
   };
   reader.readAsDataURL(f);
+}
+
+// ── Sélecteur de candidats (CV) MultiveRH ──
+async function ia_ouvrirSelecteurCandidats() {
+  const existing = document.getElementById('ia-cand-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'ia-cand-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;padding:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:18px;font-weight:800;color:var(--brand);">🏥 Choisir un candidat dans MultiveRH</div>
+        <button onclick="document.getElementById('ia-cand-modal').remove()" style="background:#f5f5f5;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <input type="text" id="ia-cand-metier" placeholder="🔎 Métier (ex: comptable)" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
+        <input type="text" id="ia-cand-loc" placeholder="📍 Lieu / CP (ex: Toulouse ou 31)" style="flex:1;min-width:140px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
+        <input type="text" id="ia-cand-q" placeholder="Nom..." style="flex:1;min-width:120px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
+        <button class="btn btn-primary" onclick="ia_rechercherCandidats()">Rechercher</button>
+      </div>
+      <div id="ia-cand-list" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;">
+        <div style="text-align:center;padding:30px;color:var(--muted);">Renseigne des critères puis clique "Rechercher"</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  // Enter pour lancer la recherche
+  ['ia-cand-metier','ia-cand-loc','ia-cand-q'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') ia_rechercherCandidats(); });
+  });
+  document.getElementById('ia-cand-metier').focus();
+}
+
+async function ia_rechercherCandidats() {
+  const metier = document.getElementById('ia-cand-metier').value.trim();
+  const loc = document.getElementById('ia-cand-loc').value.trim();
+  const q = document.getElementById('ia-cand-q').value.trim();
+  const list = document.getElementById('ia-cand-list');
+  list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Recherche…</div>`;
+
+  const baseHost = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
+    ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
+  const params = new URLSearchParams();
+  if (metier) params.set('metier', metier);
+  if (loc) params.set('location', loc);
+  if (q) params.set('q', q);
+  params.set('limit', '50');
+
+  try {
+    const r = await fetch(`https://${baseHost}/admin/api/candidates-search?${params}`, { credentials: 'include' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    window.__iaCandList = data.candidates || [];
+    ia_afficherCandidats(window.__iaCandList);
+  } catch (e) {
+    list.innerHTML = `<div style="padding:20px;color:#c00;">❌ ${e.message}<br><br>Connecte-toi à <a href="https://${baseHost}/admin" target="_blank">${baseHost}/admin</a> puis réessaie.</div>`;
+  }
+}
+
+function ia_afficherCandidats(cands) {
+  const list = document.getElementById('ia-cand-list');
+  if (!cands.length) {
+    list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);">Aucun candidat trouvé</div>`;
+    return;
+  }
+  let html = '';
+  for (const c of cands) {
+    const safe = s => (s || '').toString().replace(/"/g, '&quot;');
+    const loc = [c.zipcode, c.city].filter(Boolean).join(' ');
+    html += `<div onclick="ia_choisirCandidat(${c.id})" style="border-bottom:1px solid #eee;padding:10px 12px;cursor:pointer;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
+      <div style="font-weight:700;color:var(--navy);">${safe(c.first_name)} ${safe(c.last_name)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">
+        ${c.metier ? `💼 ${safe(c.metier)} ` : ''}
+        ${loc ? `· 📍 ${safe(loc)} ` : ''}
+        ${c.updated_at ? `· maj ${c.updated_at}` : ''}
+      </div>
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+
+function ia_choisirCandidat(id) {
+  const c = (window.__iaCandList || []).find(x => x.id === id);
+  if (!c) return;
+  // Remplit le formulaire de prospection avec le métier + lieu du candidat
+  document.getElementById('ia-metier').value = c.metier || '';
+  const loc = c.city || c.zipcode || '';
+  document.getElementById('ia-lieu').value = loc;
+  document.getElementById('ia-cv-status').textContent = `✅ Candidat ${c.first_name} ${c.last_name} sélectionné`;
+  document.getElementById('ia-cand-modal').remove();
+  // Lance la prospection directement
+  if (c.metier) lancerProspectionIA();
 }
 
 // ── Affiche le CV (PDF) dans le panneau de gauche ──
