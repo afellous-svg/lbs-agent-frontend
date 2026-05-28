@@ -104,6 +104,9 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
 /* ── Tooltip offre d'emploi au survol ── */
 .offer-tooltip-wrapper:hover .offer-tooltip{display:block !important;}
 .offer-tooltip-wrapper{cursor:pointer;}
+/* ── Tiers repliables ── */
+.tier-details summary::-webkit-details-marker{display:none;}
+.tier-details[open] .tier-caret{transform:rotate(90deg);}
 </style>
 </head>
 <body>
@@ -1051,8 +1054,14 @@ function renderProspectionResults(data) {
   for (let ti = 0; ti < data.tiers.length; ti++) {
     const tier = data.tiers[ti];
     const cs = tier.companies || [];
-    html += `<div class="card" style="margin-bottom:14px;">
-      <div style="font-weight:800;color:var(--brand);margin-bottom:10px;">${tier.label} <span style="color:var(--muted);font-weight:400;">(${cs.length})</span></div>`;
+    // Chaque tier est repliable (fermé par défaut). Premier tier non vide ouvert pour aperçu.
+    const openAttr = ''; // tous fermés par défaut
+    html += `<details ${openAttr} class="card tier-details" style="margin-bottom:14px;">
+      <summary style="cursor:pointer;font-weight:800;color:var(--brand);list-style:none;display:flex;align-items:center;gap:8px;user-select:none;">
+        <span class="tier-caret" style="transition:transform 0.15s;">▶</span>
+        ${tier.label} <span style="color:var(--muted);font-weight:400;">(${cs.length})</span>
+      </summary>
+      <div style="margin-top:12px;">`;
     if (cs.length === 0) {
       html += `<div style="font-style:italic;color:var(--muted);font-size:13px;">Aucun résultat sur ce tier.</div>`;
     } else {
@@ -1087,7 +1096,7 @@ function renderProspectionResults(data) {
       }
       html += `</div>`;
     }
-    html += `</div>`;
+    html += `</div></details>`;
   }
 
   container.innerHTML = html;
