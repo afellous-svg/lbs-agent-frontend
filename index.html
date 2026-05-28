@@ -1079,8 +1079,9 @@ function renderProspectionResults(data) {
             ${c.website ? `<a href="${c.website}" target="_blank" style="color:#58A693;">🌐 site</a>` : ''}
             <span id="phone-${cid}">${c.phone ? `<a href="tel:${c.phone.replace(/[^+\d]/g,'')}" style="color:var(--brand);font-weight:600;">📞 ${c.phone}</a>` : `<a href="#" onclick="event.preventDefault();ia_findPhone(${ti},${ci})" style="color:#7B8A87;font-size:11px;border:1px dashed #aaa;padding:1px 5px;border-radius:3px;">📞 Trouver tel</a>`}</span>
           </div>
-          ${c.offer_title ? `<div style="color:#FF5A1F;font-size:11px;margin-top:3px;" class="offer-tooltip-wrapper">
-            ${c.offer_url ? `<a href="${c.offer_url}" target="_blank" style="color:#FF5A1F;text-decoration:none;" title="${(c.offer_description || '').replace(/"/g,'&quot;').slice(0,300)}">📋 ${c.offer_title}${c.offer_contract ? ' · '+c.offer_contract : ''}</a>` : `📋 ${c.offer_title}`}
+          ${c.offer_title ? `<div style="margin-top:4px;">
+            ${c.offer_url ? `<a href="${c.offer_url}" target="_blank" style="color:#FF5A1F;text-decoration:none;font-size:11px;font-weight:600;">📋 ${c.offer_title}${c.offer_contract ? ' · '+c.offer_contract : ''}</a>` : `<span style="color:#FF5A1F;font-size:11px;font-weight:600;">📋 ${c.offer_title}</span>`}
+            ${c.offer_description ? `<div style="color:var(--muted);font-size:10px;line-height:1.35;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.offer_description.slice(0,160)}</div>` : ''}
           </div>` : ''}
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompanySmart(${ti}, ${ci})">⚡ Enrichir (DRH + ${window.__iaServiceLabel || 'responsable métier'})</button>
@@ -1095,6 +1096,51 @@ function renderProspectionResults(data) {
   }
 
   container.innerHTML = html;
+
+  // ── Import automatique de toutes les sociétés en base (+ téléphones) ──
+  ia_autoImportAll(data);
+}
+
+// Importe automatiquement toutes les sociétés des 3 tiers en base MultiveRH (avec tél)
+let __iaAutoImportDone = false;
+async function ia_autoImportAll(data) {
+  const all = [];
+  for (const tier of data.tiers) for (const c of (tier.companies || [])) {
+    all.push({ name: c.name, siret: c.siret, website: c.website, city: c.city || c.ville, zipcode: c.zipcode, naf: c.naf, phone: c.phone });
+  }
+  if (!all.length) return;
+  // Indicateur discret
+  const statusEl = document.getElementById('ia-cv-status');
+  if (statusEl) statusEl.textContent = '💾 Import en base + récupération des téléphones…';
+  try {
+    const r = await apiFetch('/prospection/import-all-companies', {
+      method: 'POST',
+      body: JSON.stringify({ companies: all, fetch_phones: true }),
+    });
+    const out = await r.json();
+    if (out.ok) {
+      const s = out.stats || {};
+      // Met à jour les téléphones affichés
+      if (Array.isArray(out.companies_with_phone)) {
+        for (const cp of out.companies_with_phone) {
+          // retrouve la carte et met à jour le tél
+          for (const tier of data.tiers) for (let ci = 0; ci < (tier.companies||[]).length; ci++) {
+            const c = tier.companies[ci];
+            if (c.name === cp.name && !c.phone) {
+              c.phone = cp.phone;
+              const span = document.getElementById(`phone-${c.__cardId}`);
+              if (span) span.innerHTML = `<a href="tel:${cp.phone.replace(/[^+\d]/g,'')}" style="color:var(--brand);font-weight:600;">📞 ${cp.phone}</a>`;
+            }
+          }
+        }
+      }
+      if (statusEl) statusEl.textContent = `✅ ${s.companies_created||0} sociétés créées en base · ${out.phones_fetched||0} tél trouvés`;
+    } else if (statusEl) {
+      statusEl.textContent = '⚠️ Import base : ' + (out.error || 'erreur');
+    }
+  } catch (e) {
+    if (statusEl) statusEl.textContent = '⚠️ Import base échoué : ' + e.message;
+  }
 }
 
 // ── Enrichissement cascade d'UNE société (DRH/Compta/Direction) ──
