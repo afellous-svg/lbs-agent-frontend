@@ -893,22 +893,14 @@ async function ia_rechercherCandidats() {
   const list = document.getElementById('ia-cand-list');
   list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Recherche…</div>`;
 
-  const baseHost = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
-    ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
-  const params = new URLSearchParams();
-  if (metier) params.set('metier', metier);
-  if (loc) params.set('location', loc);
-  if (q) params.set('q', q);
-  params.set('limit', '50');
-
   try {
-    const r = await fetch(`https://${baseHost}/admin/api/candidates-search?${params}`, { credentials: 'include' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    const data = await lbsAdminFetch('/admin/api/candidates-search', {
+      metier, location: loc, q, limit: 50,
+    });
     window.__iaCandList = data.candidates || [];
     ia_afficherCandidats(window.__iaCandList);
   } catch (e) {
-    list.innerHTML = `<div style="padding:20px;color:#c00;">❌ ${e.message}<br><br>Connecte-toi à <a href="https://${baseHost}/admin" target="_blank">${baseHost}/admin</a> puis réessaie.</div>`;
+    list.innerHTML = `<div style="padding:20px;color:#c00;">❌ ${e.message}<br><br>Recharge la page MultiveRH (la session SSO a peut-être expiré).</div>`;
   }
 }
 
@@ -1939,19 +1931,13 @@ async function fp_ouvrirSelecteurOffres() {
   `;
   document.body.appendChild(modal);
 
-  // Récupère les offres depuis MultiveRH
-  const baseHost = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
-    ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
+  // Récupère les offres depuis MultiveRH (auth SSO HMAC, CORS-safe)
   try {
-    const r = await fetch(`https://${baseHost}/admin/api/job-offers-list`, {
-      credentials: 'include',
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    const data = await lbsAdminFetch('/admin/api/job-offers-list', { limit: 200 });
     window.__fpMvOffers = data.offers || [];
     fp_afficherOffres(window.__fpMvOffers);
   } catch (e) {
-    document.getElementById('fp-mv-list').innerHTML = `<div style="padding:20px;color:#c00;">❌ Impossible de charger les offres : ${e.message}<br><br>Vérifie que tu es connecté à MultiveRH (<a href="https://${baseHost}/admin" target="_blank">${baseHost}/admin</a>).</div>`;
+    document.getElementById('fp-mv-list').innerHTML = `<div style="padding:20px;color:#c00;">❌ Impossible de charger les offres : ${e.message}<br><br>Recharge la page MultiveRH (la session SSO a peut-être expiré).</div>`;
   }
 }
 
@@ -3238,6 +3224,26 @@ function readSsoFromStorage() {
     const p = sessionStorage.getItem('lbs_sso_params');
     return p ? JSON.parse(p) : null;
   } catch { return null; }
+}
+
+// Appel d'un endpoint admin MultiveRH avec auth SSO HMAC (CORS-safe, pas de cookie)
+async function lbsAdminFetch(path, queryParams = {}) {
+  const sso = window.__lbsSsoParams || readSsoFromStorage();
+  const host = (location.hostname.includes('preprod') || document.referrer.includes('preprod'))
+    ? 'preprod.lebonsoignant.fr' : 'www.lebonsoignant.fr';
+  const url = new URL(`https://${host}${path}`);
+  for (const [k, v] of Object.entries(queryParams)) {
+    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+  }
+  if (sso) {
+    url.searchParams.set('sso_email', sso.email);
+    url.searchParams.set('sso_name', sso.name || '');
+    url.searchParams.set('sso_ts', sso.ts);
+    url.searchParams.set('sso_sig', sso.sig);
+  }
+  const r = await fetch(url.toString(), { method: 'GET' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
 }
 
 function renderCvContact() { document.getElementById('contacts-empty').classList.add('hidden'); renderContacts(); }
