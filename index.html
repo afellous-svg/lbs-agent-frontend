@@ -1025,6 +1025,25 @@ async function lancerProspectionIA() {
   }
 }
 
+// Badge source de l'offre (logo + couleur par plateforme)
+function ia_sourceBadge(c) {
+  const sources = (c.sources && c.sources.length) ? c.sources : (c.source ? [c.source] : []);
+  if (!sources.length) return '';
+  const map = {
+    'france-travail': { label: 'France Travail', bg: '#e8f0fe', fg: '#0747a6', ico: '🇫🇷' },
+    'apec':           { label: 'APEC',           bg: '#e7eefc', fg: '#0e3a77', ico: '🟦' },
+    'linkedin':       { label: 'LinkedIn',       bg: '#e8f4fb', fg: '#0a66c2', ico: '💼' },
+    'google-jobs':    { label: 'Google Jobs',    bg: '#fef0ef', fg: '#ea4335', ico: '🔎' },
+    'hellowork':      { label: 'HelloWork',      bg: '#fff0e8', fg: '#ff5a1f', ico: '🟠' },
+    'sirene':         { label: 'SIRENE',         bg: '#eef2f0', fg: '#5b6b66', ico: '🏛️' },
+  };
+  // Dédup + un badge par source
+  return [...new Set(sources)].map(s => {
+    const m = map[s] || { label: s, bg: '#eee', fg: '#555', ico: '•' };
+    return `<span style="background:${m.bg};color:${m.fg};font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap;">${m.ico} ${m.label}</span>`;
+  }).join('');
+}
+
 function renderProspectionResults(data) {
   const container = document.getElementById('ia-results');
   window.__iaResultsData = data;
@@ -1079,9 +1098,12 @@ function renderProspectionResults(data) {
             ${c.website ? `<a href="${c.website}" target="_blank" style="color:#58A693;">🌐 site</a>` : ''}
             <span id="phone-${cid}">${c.phone ? `<a href="tel:${c.phone.replace(/[^+\d]/g,'')}" style="color:var(--brand);font-weight:600;">📞 ${c.phone}</a>` : `<a href="#" onclick="event.preventDefault();ia_findPhone(${ti},${ci})" style="color:#7B8A87;font-size:11px;border:1px dashed #aaa;padding:1px 5px;border-radius:3px;">📞 Trouver tel</a>`}</span>
           </div>
-          ${c.offer_title ? `<div style="margin-top:4px;">
-            ${c.offer_url ? `<a href="${c.offer_url}" target="_blank" style="color:#FF5A1F;text-decoration:none;font-size:11px;font-weight:600;">📋 ${c.offer_title}${c.offer_contract ? ' · '+c.offer_contract : ''}</a>` : `<span style="color:#FF5A1F;font-size:11px;font-weight:600;">📋 ${c.offer_title}</span>`}
-            ${c.offer_description ? `<div style="color:var(--muted);font-size:10px;line-height:1.35;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.offer_description.slice(0,160)}</div>` : ''}
+          ${c.offer_title ? `<div style="margin-top:5px;">
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+              ${ia_sourceBadge(c)}
+              ${c.offer_url ? `<a href="${c.offer_url}" target="_blank" style="color:#FF5A1F;text-decoration:none;font-size:11px;font-weight:600;">${c.offer_title}${c.offer_contract ? ' · '+c.offer_contract : ''}</a>` : `<span style="color:#FF5A1F;font-size:11px;font-weight:600;">${c.offer_title}</span>`}
+            </div>
+            ${c.offer_description ? `<div title="${(c.offer_description||'').replace(/"/g,'&quot;').slice(0,500)}" style="color:var(--muted);font-size:10px;line-height:1.35;margin-top:3px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:help;">${c.offer_description.slice(0,200)}</div>` : '<div style="color:#bbb;font-size:10px;margin-top:2px;font-style:italic;">Clique le titre pour voir l\\'offre complète</div>'}
           </div>` : ''}
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompanySmart(${ti}, ${ci})">⚡ Enrichir (DRH + ${window.__iaServiceLabel || 'responsable métier'})</button>
