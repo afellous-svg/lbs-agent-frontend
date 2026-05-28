@@ -798,7 +798,7 @@ function showMainTab(name) {
   if (btn) btn.classList.add('active');
   // Active le 1er sous-onglet par défaut
   if (name === 'recherche') showSubTab('recherche', 'fiche');
-  else if (name === 'prospection') showSubTab('prospection', 'cv');
+  else if (name === 'prospection') showSubTab('prospection', 'ia');
 }
 
 // ══ PROSPECTION IA ══
@@ -2171,7 +2171,7 @@ async function rechercherCandidatsFP() {
       ${renderResultsSlideshow(crmCands, 'crm-slide')}
       ${crmCands.length ? `<div class="flex mt16" style="justify-content:center;gap:10px;">
         <button class="btn" onclick="importerDansMultiveRH()" style="background:#1a7a5e;color:#fff;">📥 Tout importer dans MultiveRH</button>
-        <button class="btn btn-primary" onclick="showMainTab('prospection');showSubTab('prospection','contacts')">📬 Prospecter →</button>
+        <button class="btn btn-primary" onclick="showMainTab('prospection');showSubTab('prospection','ia')">📬 Prospecter →</button>
       </div>` : ''}
     `;
     // Réexécute le script inline du slideshow (innerHTML n'exécute pas les scripts)
@@ -2611,7 +2611,7 @@ function toggleSelect(id) {
   else STATE.selected.push(id);
   renderCandidates();
 }
-function goToContacts() { showMainTab('prospection');showSubTab('prospection','contacts'); }
+function goToContacts() { showMainTab('prospection');showSubTab('prospection','ia'); }
 
 // ══ CULTIVERH ══
 async function loadViviers() {
@@ -2786,10 +2786,10 @@ async function analyzeCv() {
         <div style="font-size:13px;color:#777;font-style:italic;margin-bottom:10px;">${p.resume}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${(p.specialites||[]).map(s=>`<span class="tag">${s}</span>`).join('')}</div>
         <div style="font-size:12px;color:#888;">${p.email ? '✉️ '+p.email : ''} ${p.tel ? '· 📞 '+p.tel : ''}</div>
-        <div class="mt16"><button class="btn btn-primary" onclick="showMainTab('prospection');showSubTab('prospection','contacts');renderCvContact()">📬 Prospecter pour ce candidat →</button></div>
+        <div class="mt16"><button class="btn btn-primary" onclick="showMainTab('prospection');showSubTab('prospection','ia');renderCvContact()">📬 Prospecter pour ce candidat →</button></div>
       </div>`;
     // Déclenchement automatique de la prospection
-    setTimeout(() => { showMainTab('prospection');showSubTab('prospection','contacts');renderCvContact(); }, 800);
+    setTimeout(() => { showMainTab('prospection');showSubTab('prospection','ia');renderCvContact(); }, 800);
   } catch (e) { showError('Erreur analyse CV : ' + e.message); }
   document.getElementById('cv-loading').classList.add('hidden');
 }
