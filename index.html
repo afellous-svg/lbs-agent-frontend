@@ -461,15 +461,17 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
     <!-- ══ CONTACTS / EMAILS ══ -->
     <!-- ══ PROSPECTION IA (3 niveaux) ══ -->
     <div id="tab-ia" class="hidden">
+      <!-- ── Barre d'action principale (en haut) ── -->
       <div class="card">
-        <div style="background:#f5f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#5b21b6;line-height:1.55;">
-          🎯 <strong>Prospection IA en 3 niveaux</strong> — Dépose un CV, l'agent identifie le métier + la zone, puis trouve :<br>
-          1️⃣ Les sociétés <strong>qui recrutent</strong> ce métier maintenant<br>
-          2️⃣ Les <strong>sociétés du secteur</strong> (cabinets, bureaux d'études…)<br>
-          3️⃣ Les sociétés <strong>>50 salariés</strong> ayant probablement un service similaire<br>
-          Puis crée un <strong>vivier de prospection</strong> dans MultiveRH.
+        <!-- Sources de CV : déposer OU choisir dans MultiveRH -->
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+          <label for="ia-cv-file" class="btn btn-purple" style="cursor:pointer;">📎 Déposer un CV (auto-détection)</label>
+          <input type="file" id="ia-cv-file" accept=".pdf,.txt" style="display:none;" onchange="ia_handleCvFile(this)">
+          <button class="btn" style="background:#58A693;color:#fff;border:none;cursor:pointer;" onclick="ia_ouvrirSelecteurCandidats()">🏥 Choisir un CV dans MultiveRH</button>
+          <span id="ia-cv-status" style="font-size:12px;color:var(--muted);"></span>
         </div>
 
+        <!-- Critères + lancement -->
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <div class="label">Métier visé (extrait du CV automatiquement)</div>
@@ -477,18 +479,9 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
           </div>
           <div style="flex:1;min-width:160px;">
             <div class="label">Localisation</div>
-            <input type="text" id="ia-lieu" placeholder="ex : Toulouse">
+            <input type="text" id="ia-lieu" placeholder="ex : Toulouse ou 31000">
           </div>
           <button class="btn btn-primary" onclick="lancerProspectionIA()">🚀 Lancer la prospection</button>
-        </div>
-
-        <div style="margin-top:14px;text-align:center;color:var(--muted);font-size:12px;">— ou bien —</div>
-
-        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <label for="ia-cv-file" class="btn btn-purple" style="cursor:pointer;">📎 Déposer un CV (auto-détection)</label>
-          <input type="file" id="ia-cv-file" accept=".pdf,.txt" style="display:none;" onchange="ia_handleCvFile(this)">
-          <button class="btn" style="background:#58A693;color:#fff;border:none;cursor:pointer;" onclick="ia_ouvrirSelecteurCandidats()">🏥 Choisir un CV dans MultiveRH</button>
-          <span id="ia-cv-status" style="font-size:12px;color:var(--muted);"></span>
         </div>
       </div>
 
@@ -512,6 +505,18 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
           <div id="ia-results"></div>
         </div>
       </div>
+
+      <!-- Encart explicatif (discret, repliable, en bas) -->
+      <details style="margin-top:18px;">
+        <summary style="cursor:pointer;color:var(--muted);font-size:12px;padding:6px 0;">ℹ️ Comment fonctionne la Prospection IA en 3 niveaux ?</summary>
+        <div style="background:#f5f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-top:6px;font-size:13px;color:#5b21b6;line-height:1.55;">
+          🎯 <strong>Prospection IA en 3 niveaux</strong> — Dépose ou choisis un CV, l'agent identifie le métier + la zone, puis trouve :<br>
+          1️⃣ Les sociétés <strong>qui recrutent</strong> ce métier maintenant (France Travail, APEC, LinkedIn, Google Jobs)<br>
+          2️⃣ Les <strong>sociétés du secteur</strong> (cabinets, bureaux d'études…)<br>
+          3️⃣ Les sociétés <strong>>50 salariés</strong> ayant probablement un service similaire<br>
+          Puis enrichit les contacts (DRH + responsable métier) et crée un <strong>vivier</strong> dans MultiveRH.
+        </div>
+      </details>
     </div>
 
     <!-- ══ CLAY ══ -->
