@@ -171,18 +171,15 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
       <div id="fp-split" style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:flex-start;">
         <!-- Colonne gauche : zone fiche / PDF -->
         <div class="card" style="min-width:0;">
-          <div style="background:#f5f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#5b21b6;">
-            📋 <strong>Sourcing par fiche de poste</strong>
-          </div>
-          <div class="flex mb16" style="flex-wrap:wrap;">
+          <!-- Boutons sources en haut -->
+          <div class="flex mb16" style="flex-wrap:wrap;gap:8px;">
             <button class="btn btn-purple btn-sm" id="fp-mode-paste-btn" onclick="setFpMode('paste')">📝 Coller</button>
             <label for="fp-file-input" class="btn btn-sm" id="fp-mode-file-btn" onclick="setFpMode('file')" style="background:#f0f4f2;border:none;cursor:pointer;">📎 PDF</label>
             <button class="btn btn-sm" id="fp-mode-multiverh-btn" onclick="setFpMode('multiverh');fp_ouvrirSelecteurOffres()" style="background:#58A693;color:#fff;border:none;cursor:pointer;">🏥 Choisir dans MultiveRH</button>
             <input type="file" id="fp-file-input" accept=".pdf,.txt" style="display:none;" onchange="handleFpFile(this)"/>
           </div>
           <div id="fp-paste-zone">
-            <div class="label">Collez votre fiche de poste</div>
-            <textarea id="fp-text" rows="16" placeholder="Poste : Infirmière de nuit — EHPAD&#10;Lieu : Paris 14e&#10;Contrat : CDI&#10;Expérience : minimum 2 ans…"></textarea>
+            <textarea id="fp-text" rows="7" placeholder="Collez ici la fiche de poste (intitulé, lieu, contrat, expérience, missions…)" style="font-family:inherit;font-size:14px;line-height:1.5;border:1.5px solid var(--border);border-radius:12px;padding:14px;width:100%;resize:vertical;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--border)'"></textarea>
           </div>
           <div id="fp-file-zone" class="hidden">
             <div style="border:2px dashed #c4b5fd;border-radius:12px;padding:10px 14px;background:#f9f7ff;display:flex;align-items:center;justify-content:space-between;gap:10px;">
@@ -194,8 +191,16 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
             </div>
           </div>
           <div id="fp-paste-action" class="flex mt16" style="justify-content:flex-end;">
-            <button class="btn btn-purple" onclick="analyserFiche()">🤖 Analyser et rechercher →</button>
+            <button class="btn btn-primary" onclick="analyserFiche()">🤖 Analyser et rechercher →</button>
           </div>
+
+          <!-- Encart explicatif discret en bas -->
+          <details style="margin-top:16px;">
+            <summary style="cursor:pointer;color:var(--muted);font-size:12px;padding:4px 0;">ℹ️ Comment fonctionne le sourcing par fiche de poste ?</summary>
+            <div style="background:#f5f0ff;border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-top:6px;font-size:13px;color:#5b21b6;line-height:1.55;">
+              📋 <strong>Sourcing par fiche de poste</strong> — Colle/dépose une fiche ou choisis-en une dans MultiveRH. L'agent extrait les critères (poste, lieu, contrat, expérience) puis cherche des candidats sur MultiveRH, HelloWork, APEC, France Travail, et peut <strong>chasser des candidats en poste</strong> sur LinkedIn avec leurs emails déduits.
+            </div>
+          </details>
         </div>
 
         <!-- Colonne droite : critères + boutons sources -->
