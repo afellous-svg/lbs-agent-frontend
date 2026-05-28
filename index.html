@@ -1593,8 +1593,9 @@ function renderEnrichResultSmart(target, company, tierIdx, cIdx, roles) {
     } else {
       for (let i = 0; i < Math.min(contacts.length, 5); i++) {
         const p = contacts[i];
-        html += `<div style="background:#fff;border:1px solid #e8efed;border-radius:6px;padding:4px 6px;margin-bottom:2px;font-size:11px;">
-          <strong>${p.first_name} ${p.last_name}</strong>
+        const baseBadge = p.in_base ? '<span style="background:#e9f5f1;color:#2a8a72;padding:0 4px;border-radius:3px;font-size:9px;margin-left:4px;" title="Déjà dans votre base client">🗄️ en base</span>' : '';
+        html += `<div style="background:${p.in_base ? '#f3faf7' : '#fff'};border:1px solid #e8efed;border-radius:6px;padding:4px 6px;margin-bottom:2px;font-size:11px;">
+          <strong>${p.first_name} ${p.last_name}</strong>${baseBadge}
           ${p.title ? `<span style="color:var(--muted);font-size:10px;"> · ${p.title}</span>` : ''}
           ${p.linkedin ? `<a href="${p.linkedin}" target="_blank" style="font-size:10px;margin-left:4px;">LI</a>` : ''}
           ${p.email ? `<div style="color:#2a8a72;font-size:10px;">✉️ ${p.email}</div>` : ''}
