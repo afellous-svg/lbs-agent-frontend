@@ -1036,6 +1036,58 @@ function ia_sourceBadge(c) {
   }).join('');
 }
 
+// ── Popup flottant : contenu complet de l'offre au survol ──
+let __offerPopupTimer = null;
+function ia_ensureOfferPopup() {
+  let p = document.getElementById('offer-popup');
+  if (!p) {
+    p = document.createElement('div');
+    p.id = 'offer-popup';
+    p.style.cssText = 'position:fixed;z-index:99999;display:none;background:#fff;border:1px solid var(--brand);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.22);width:380px;max-height:60vh;overflow-y:auto;padding:14px;font-size:12px;color:var(--navy);line-height:1.5;';
+    // Reste ouvert si on entre dans le popup
+    p.onmouseenter = () => { if (__offerPopupTimer) clearTimeout(__offerPopupTimer); };
+    p.onmouseleave = () => ia_hideOfferPopup();
+    document.body.appendChild(p);
+  }
+  return p;
+}
+function ia_showOfferPopup(ev, ti, ci) {
+  const c = window.__iaResultsData?.tiers?.[ti]?.companies?.[ci];
+  if (!c || !c.offer_title) return;
+  if (__offerPopupTimer) clearTimeout(__offerPopupTimer);
+  const p = ia_ensureOfferPopup();
+  const esc = s => (s || '').replace(/</g, '&lt;');
+  p.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:8px;">
+      <div style="font-weight:800;color:var(--brand);font-size:13px;">${esc(c.offer_title)}</div>
+      ${ia_sourceBadge(c)}
+    </div>
+    <div style="margin-bottom:8px;">
+      ${c.offer_contract ? `<span style="background:#fff5ed;color:#d04a13;padding:2px 7px;border-radius:4px;font-size:10px;margin-right:4px;">${esc(c.offer_contract)}</span>` : ''}
+      ${c.offer_salary ? `<span style="background:#e9f5f1;color:#2a8a72;padding:2px 7px;border-radius:4px;font-size:10px;">💰 ${esc(c.offer_salary)}</span>` : ''}
+      <span style="color:var(--muted);font-size:11px;">${esc(c.name)}${c.ville ? ' · '+esc(c.ville) : ''}</span>
+    </div>
+    <div style="white-space:pre-line;color:#333;">${c.offer_description ? esc(c.offer_description) : `<i style="color:#999;">Pas de description capturée. Clique le titre pour voir l'offre complète sur le site source.</i>`}</div>
+    ${c.offer_url ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);"><a href="${c.offer_url}" target="_blank" style="color:#58A693;font-weight:700;">→ Voir l'offre complète</a></div>` : ''}
+  `;
+  p.style.display = 'block';
+  // Positionnement : à droite de la carte si possible, sinon à gauche
+  const rect = ev.currentTarget.getBoundingClientRect();
+  const pw = 380, ph = Math.min(window.innerHeight * 0.6, p.offsetHeight || 300);
+  let left = rect.right + 12;
+  if (left + pw > window.innerWidth - 10) left = Math.max(10, rect.left - pw - 12);
+  let top = rect.top;
+  if (top + ph > window.innerHeight - 10) top = Math.max(10, window.innerHeight - ph - 10);
+  p.style.left = left + 'px';
+  p.style.top = top + 'px';
+}
+function ia_hideOfferPopup() {
+  __offerPopupTimer = setTimeout(() => {
+    const p = document.getElementById('offer-popup');
+    if (p) p.style.display = 'none';
+  }, 150);
+}
+
 function renderProspectionResults(data) {
   const container = document.getElementById('ia-results');
   window.__iaResultsData = data;
@@ -1090,12 +1142,12 @@ function renderProspectionResults(data) {
             ${c.website ? `<a href="${c.website}" target="_blank" style="color:#58A693;">🌐 site</a>` : ''}
             <span id="phone-${cid}">${c.phone ? `<a href="tel:${c.phone.replace(/[^+\d]/g,'')}" style="color:var(--brand);font-weight:600;">📞 ${c.phone}</a>` : `<a href="#" onclick="event.preventDefault();ia_findPhone(${ti},${ci})" style="color:#7B8A87;font-size:11px;border:1px dashed #aaa;padding:1px 5px;border-radius:3px;">📞 Trouver tel</a>`}</span>
           </div>
-          ${c.offer_title ? `<div style="margin-top:5px;">
+          ${c.offer_title ? `<div style="margin-top:5px;" onmouseenter="ia_showOfferPopup(event, ${ti}, ${ci})" onmouseleave="ia_hideOfferPopup()">
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
               ${ia_sourceBadge(c)}
               ${c.offer_url ? `<a href="${c.offer_url}" target="_blank" style="color:#FF5A1F;text-decoration:none;font-size:11px;font-weight:600;">${c.offer_title}${c.offer_contract ? ' · '+c.offer_contract : ''}</a>` : `<span style="color:#FF5A1F;font-size:11px;font-weight:600;">${c.offer_title}</span>`}
             </div>
-            ${c.offer_description ? `<div title="${(c.offer_description||'').replace(/"/g,'&quot;').slice(0,500)}" style="color:var(--muted);font-size:10px;line-height:1.35;margin-top:3px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:help;">${c.offer_description.slice(0,200)}</div>` : `<div style="color:#bbb;font-size:10px;margin-top:2px;font-style:italic;">Clique le titre pour voir l'offre complète</div>`}
+            ${c.offer_description ? `<div style="color:var(--muted);font-size:10px;line-height:1.35;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:help;">${c.offer_description.slice(0,140)}…</div>` : `<div style="color:#bbb;font-size:10px;margin-top:2px;font-style:italic;">Survole pour voir l'offre · clique pour l'ouvrir</div>`}
           </div>` : ''}
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompanySmart(${ti}, ${ci})">⚡ Enrichir (DRH + ${window.__iaServiceLabel || 'responsable métier'})</button>
