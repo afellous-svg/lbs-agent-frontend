@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
 <style>
 :root{
   --brand:#58A693;
@@ -34,6 +35,9 @@
   --bg:#F5F7F6;
   --border:#E2E8E5;
   --muted:#7B8A87;
+  /* ── Design system unifié : on garde le vert/or actuels comme marque ── */
+  --brand-primary:#58A693;--brand-primary-r:88;--brand-primary-g:166;--brand-primary-b:147;
+  --brand-secondary:#D6AE4F;--brand-secondary-r:214;--brand-secondary-g:174;--brand-secondary-b:79;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Mulish','Arial',sans-serif;background:var(--bg);min-height:100vh;color:var(--navy);}
@@ -51,15 +55,15 @@ body{font-family:'Mulish','Arial',sans-serif;background:var(--bg);min-height:100
 input,textarea,select{width:100%;padding:11px 15px;border-radius:8px;border:1.5px solid var(--border);font-size:14px;outline:none;font-family:inherit;background:#fff;box-sizing:border-box;color:var(--navy);transition:border-color 0.15s;}
 input:focus,textarea:focus,select:focus{border-color:var(--brand);}
 textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif;font-size:13px;line-height:1.5;}
-.btn{padding:11px 20px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;transition:all 0.15s;letter-spacing:0.2px;}
+.btn{padding:11px 20px;border-radius:var(--radius-md);border:none;cursor:pointer;font-weight:700;font-size:var(--font-size-sm);font-family:inherit;transition:all 0.15s;letter-spacing:0.2px;}
 .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(24,45,77,0.12);}
-.btn-primary{background:var(--brand);color:#fff;}
-.btn-primary:hover{background:var(--brand-dark);}
-.btn-purple{background:var(--gold);color:#fff;}
-.btn-purple:hover{background:#C09635;}
-.btn-red{background:#C0191B;color:#fff;}
-.btn-ghost{background:transparent;border:1.5px solid var(--brand);color:var(--brand);}
-.btn-sm{padding:6px 14px;font-size:12px;}
+.btn-primary{background:var(--brand-primary);color:#fff;}
+.btn-primary:hover{background:var(--brand-primary-hover);}
+.btn-purple{background:var(--brand-secondary);color:#fff;}
+.btn-purple:hover{background:var(--brand-secondary-hover);}
+.btn-red{background:var(--color-error);color:#fff;}
+.btn-ghost{background:transparent;border:1.5px solid var(--brand-primary);color:var(--brand-primary);}
+.btn-sm{padding:6px 14px;font-size:var(--font-size-xs);}
 .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 .row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;}
 .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
@@ -238,6 +242,7 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
         <div style="font-weight:700;color:#7C3AED;margin-top:10px;">Recherche dans 310 437 candidats…</div>
       </div>
       <div id="fp-sources" class="hidden flex mb16"></div>
+      <div id="fp-absorbed" class="hidden"></div>
       <div id="fp-results"></div>
     </div>
 
@@ -470,8 +475,8 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
       <div class="card">
         <!-- Sources de CV : déposer OU choisir dans MultiveRH -->
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-          <label for="ia-cv-file" class="btn btn-purple" style="cursor:pointer;">📎 Déposer un CV (auto-détection)</label>
-          <input type="file" id="ia-cv-file" accept=".pdf,.txt" style="display:none;" onchange="ia_handleCvFile(this)">
+          <label for="ia-cv-file" class="btn btn-purple" style="cursor:pointer;">📎 Déposer un ou plusieurs CV (auto-détection)</label>
+          <input type="file" id="ia-cv-file" accept=".pdf,.txt" multiple style="display:none;" onchange="ia_handleCvFile(this)">
           <button class="btn" style="background:#58A693;color:#fff;border:none;cursor:pointer;" onclick="ia_ouvrirSelecteurCandidats()">🏥 Choisir un CV dans MultiveRH</button>
           <span id="ia-cv-status" style="font-size:12px;color:var(--muted);"></span>
         </div>
@@ -486,8 +491,25 @@ textarea{min-height:80px;resize:vertical;font-family:'Mulish','Arial',sans-serif
             <div class="label">Localisation</div>
             <input type="text" id="ia-lieu" placeholder="ex : Toulouse ou 31000">
           </div>
+          <div style="min-width:140px;">
+            <div class="label">Rayon (secteur)</div>
+            <select id="ia-radius" style="padding:9px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--navy);width:100%;">
+              <option value="0">Département entier</option>
+              <option value="10">10 km autour</option>
+              <option value="15">15 km autour</option>
+              <option value="20" selected>20 km autour</option>
+              <option value="30">30 km autour</option>
+              <option value="50">50 km autour</option>
+            </select>
+          </div>
           <button class="btn btn-primary" onclick="lancerProspectionIA()">🚀 Lancer la prospection</button>
         </div>
+      </div>
+
+      <!-- Bandeau campagne : CV sélectionnés depuis la CVThèque MultiveRH -->
+      <div id="ia-campaign-banner" class="hidden card" style="margin-bottom:14px;padding:12px 16px;background:#eafaf4;border:1px solid #58A693;">
+        <div style="font-weight:800;color:#1a7a5e;font-size:14px;margin-bottom:8px;">📬 Campagne — <span id="ia-campaign-count">0</span> CV sélectionné(s) dans MultiveRH</div>
+        <div id="ia-campaign-chips" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
       </div>
 
       <!-- Layout split-screen : CV à gauche, résultats à droite (s'active dès qu'un CV est déposé) -->
@@ -644,6 +666,10 @@ const STATE = {
 window.onload = async () => {
   // SSO : si des paramètres sso_* sont présents dans l'URL, échange contre un JWT
   const params = new URLSearchParams(window.location.search);
+  // Pré-remplissage prospection depuis la CVThèque (bouton « Utiliser pour la prospection »)
+  const __iaMetier = params.get('ia_metier') || '';
+  const __iaLieu = params.get('ia_lieu') || '';
+  const __prospectCandidatesRaw = params.get('prospect_candidates') || '';
   if (params.get('sso_email') && params.get('sso_ts') && params.get('sso_sig')) {
     try {
       const res = await fetch(`${API}/auth/sso-exchange`, {
@@ -680,6 +706,32 @@ window.onload = async () => {
 
   if (STATE.token && STATE.user) {
     await showApp();
+    // Campagne multi-CV : on arrive depuis la CVThèque avec plusieurs candidats sélectionnés
+    let __campaign = [];
+    if (__prospectCandidatesRaw) {
+      try { __campaign = JSON.parse(__prospectCandidatesRaw); } catch (e) { __campaign = []; }
+    }
+    if (Array.isArray(__campaign) && __campaign.length) {
+      try {
+        showMainTab('prospection');
+        window.STATE_CAMPAIGN = __campaign;
+        window.STATE_CAMPAIGN_ACTIVE = -1;
+        ia_renderCampaign(__campaign);
+        // Lance automatiquement le 1er candidat (métier extrait du CV si besoin)
+        setTimeout(() => { try { ia_runCampaignCandidate(0); } catch (e) {} }, 300);
+      } catch (e) {}
+    }
+    // Cas mono-CV (rétro-compatibilité : bouton « Utiliser pour la prospection »)
+    else if (__iaMetier) {
+      try {
+        showMainTab('prospection');
+        const mEl = document.getElementById('ia-metier');
+        const lEl = document.getElementById('ia-lieu');
+        if (mEl) mEl.value = __iaMetier;
+        if (lEl) lEl.value = __iaLieu;
+        setTimeout(() => { try { lancerProspectionIA(); } catch (e) {} }, 300);
+      } catch (e) {}
+    }
   } else {
     // Pas authentifié → on retire le masquage anti-flash pour afficher le login
     document.documentElement.classList.remove('lbs-sso-pending');
@@ -813,45 +865,85 @@ function showMainTab(name) {
 }
 
 // ══ PROSPECTION IA ══
+// Analyse UN fichier CV (PDF/txt) via Claude → { metier, localisation }
+function ia_analyzeCvFile(file) {
+  const PROMPT = 'Analyse ce CV et renvoie UNIQUEMENT un JSON {"metier":"...", "localisation":"..."}.\n\n- "metier" : l\'intitulé de poste du candidat sous forme COURTE et STANDARD recherchable sur un site d\'emploi (2 à 4 mots maximum), déduit de son TITRE de CV et surtout de son DERNIER poste occupé. Exemples : "Responsable RH", "Comptable", "Infirmier", "Agent de transit", "Community Manager", "Chef de chantier". INTERDIT : les phrases, slogans, taglines, listes avec des "/", les mots comme "expérimenté/confirmé/senior/junior", les descriptions de missions. Donne juste le nom du métier.\n- "localisation" : le LIEU DE RÉSIDENCE du candidat (sa ville de domicile, près de ses coordonnées en haut du CV). PAS la ville de son employeur ni de ses expériences. Format : ville + code postal si dispo.';
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      try {
+        const data = e.target.result.split(',')[1];
+        const res = await apiFetch('/claude/messages', {
+          method: 'POST',
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5',
+            max_tokens: 500,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } },
+                { type: 'text', text: PROMPT },
+              ],
+            }],
+          }),
+        });
+        const j = await res.json();
+        const raw = j.content?.[0]?.text || '';
+        const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+        resolve({ metier: parsed.metier || '', localisation: parsed.localisation || '' });
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('lecture du fichier impossible'));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function ia_handleCvFile(input) {
-  const f = input.files[0];
-  if (!f) return;
+  const files = Array.prototype.slice.call(input.files || []);
+  if (!files.length) return;
   const status = document.getElementById('ia-cv-status');
-  status.textContent = '⏳ Analyse du CV…';
 
-  // Affiche immédiatement le CV à gauche
-  ia_displayCv(f);
-
-  const reader = new FileReader();
-  reader.onload = async e => {
-    const data = e.target.result.split(',')[1];
+  // ── Cas MONO-CV : comportement historique (affiche le CV à gauche + analyse + lance) ──
+  if (files.length === 1) {
+    const f = files[0];
+    status.textContent = '⏳ Analyse du CV…';
+    ia_displayCv(f);
     try {
-      const res = await apiFetch('/claude/messages', {
-        method: 'POST',
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5',
-          max_tokens: 500,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } },
-              { type: 'text', text: 'Renvoie uniquement un JSON {"metier":"...", "localisation":"ville ou région"}.' },
-            ],
-          }],
-        }),
-      });
-      const j = await res.json();
-      const raw = j.content?.[0]?.text || '';
-      const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-      document.getElementById('ia-metier').value = parsed.metier || '';
-      document.getElementById('ia-lieu').value = parsed.localisation || '';
+      const r = await ia_analyzeCvFile(f);
+      document.getElementById('ia-metier').value = r.metier || '';
+      document.getElementById('ia-lieu').value = r.localisation || '';
       status.textContent = '✅ CV analysé — clique "Lancer"';
       lancerProspectionIA();
     } catch (err) {
       status.textContent = '❌ Erreur analyse : ' + err.message;
     }
-  };
-  reader.readAsDataURL(f);
+    return;
+  }
+
+  // ── Cas MULTI-CV : on analyse chaque CV → campagne ──
+  status.textContent = `⏳ Analyse de ${files.length} CV…`;
+  const campaign = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    status.textContent = `⏳ Analyse du CV ${i + 1}/${files.length} : ${f.name}…`;
+    const nom = f.name.replace(/\.(pdf|txt)$/i, '');
+    try {
+      const r = await ia_analyzeCvFile(f);
+      campaign.push({ id: '', nom: nom, metier: r.metier || '', lieu: r.localisation || '' });
+    } catch (err) {
+      campaign.push({ id: '', nom: nom, metier: '', lieu: '' });
+    }
+    // Mise à jour live du bandeau campagne au fur et à mesure
+    window.STATE_CAMPAIGN = campaign.slice();
+    ia_renderCampaign(window.STATE_CAMPAIGN);
+  }
+  // Affiche le 1er CV à gauche
+  if (files[0]) ia_displayCv(files[0]);
+  const primary = campaign.filter(c => c.metier)[0] || campaign[0];
+  document.getElementById('ia-metier').value = (primary && primary.metier) || '';
+  document.getElementById('ia-lieu').value = (primary && primary.lieu) || '';
+  status.textContent = `✅ ${files.length} CV analysés — campagne prête`;
+  if (primary && primary.metier) lancerProspectionIA();
 }
 
 // ── Sélecteur de candidats (CV) MultiveRH ──
@@ -867,11 +959,34 @@ async function ia_ouvrirSelecteurCandidats() {
         <div style="font-size:18px;font-weight:800;color:var(--brand);">🏥 Choisir un candidat dans MultiveRH</div>
         <button onclick="document.getElementById('ia-cand-modal').remove()" style="background:#f5f5f5;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;">✕</button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-        <input type="text" id="ia-cand-metier" placeholder="🔎 Métier (ex: comptable)" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
-        <input type="text" id="ia-cand-loc" placeholder="📍 Lieu / CP (ex: Toulouse ou 31)" style="flex:1;min-width:140px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
-        <input type="text" id="ia-cand-q" placeholder="Nom..." style="flex:1;min-width:120px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
-        <button class="btn btn-primary" onclick="ia_rechercherCandidats()">Rechercher</button>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px;">
+        <input type="text" id="ia-cand-metier" placeholder="🔎 Métier (ex: comptable)" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
+        <input type="text" id="ia-cand-loc" placeholder="📍 Lieu / CP (ex: Paris ou 75)" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
+        <input type="text" id="ia-cand-q" placeholder="👤 Nom / prénom / email" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;">
+        <select id="ia-cand-radius" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--navy);">
+          <option value="0">📏 Rayon autour : ville exacte</option>
+          <option value="10">Rayon 10 km</option>
+          <option value="20">Rayon 20 km</option>
+          <option value="30">Rayon 30 km</option>
+          <option value="50" selected>Rayon 50 km</option>
+          <option value="75">Rayon 75 km</option>
+          <option value="100">Rayon 100 km</option>
+        </select>
+        <select id="ia-cand-age" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--navy);">
+          <option value="0">📅 Ancienneté du CV : toutes</option>
+          <option value="1">CV de moins de 1 mois</option>
+          <option value="3" selected>CV de moins de 3 mois</option>
+          <option value="6">CV de moins de 6 mois</option>
+          <option value="12">CV de moins de 1 an</option>
+          <option value="24">CV de moins de 2 ans</option>
+          <option value="36">CV de moins de 3 ans</option>
+          <option value="48">CV de moins de 4 ans</option>
+          <option value="60">CV de moins de 5 ans</option>
+        </select>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
+        <a href="#" onclick="event.preventDefault();ia_rechercherCandidats()" style="font-size:12px;color:var(--muted);">↘︎ ou aperçu rapide ici</a>
+        <button class="btn btn-primary" onclick="ia_ouvrirCVTheque()">🔍 Rechercher dans la CVThèque ➜</button>
       </div>
       <div id="ia-cand-list" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;">
         <div style="text-align:center;padding:30px;color:var(--muted);">Renseigne des critères puis clique "Rechercher"</div>
@@ -886,18 +1001,63 @@ async function ia_ouvrirSelecteurCandidats() {
   document.getElementById('ia-cand-metier').focus();
 }
 
+// Ouvre la CVThèque native (interface complète) pré-remplie avec les critères du modal.
+function ia_ouvrirCVTheque() {
+  const metier = (document.getElementById('ia-cand-metier').value || '').trim();
+  const loc = (document.getElementById('ia-cand-loc').value || '').trim();
+  const radius = document.getElementById('ia-cand-radius') ? document.getElementById('ia-cand-radius').value : '0';
+  const params = new URLSearchParams();
+  if (metier) params.set('search_str', metier);
+  if (loc) {
+    params.set('geo_filters[around]', loc);
+    if (radius && radius !== '0') params.set('geo_filters[max_dist]', radius + 'km');
+  }
+  // Ancienneté du CV : on transmet la date mini à la CVThèque (sinon elle retombe sur son défaut 3 mois)
+  const ageSel = document.getElementById('ia-cand-age');
+  const months = ageSel ? parseInt(ageSel.value, 10) : 0;
+  if (months > 0) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - months);
+    params.set('min_filters[e.updatedAt]', d.toISOString().slice(0, 10)); // YYYY-MM-DD
+  }
+  // Flag : on vient de la prospection IA → la CVThèque affiche une case "choisir ce CV"
+  params.set('prospect_select', '1');
+  const url = 'https://www.lebonsoignant.fr/admin/candidate/cvtheque/recherche?' + params.toString();
+  // L'agent est dans une iframe → on navigue la fenêtre principale vers la CVThèque
+  try { window.top.location.href = url; } catch (e) { window.open(url, '_blank'); }
+}
+
 async function ia_rechercherCandidats() {
   const metier = document.getElementById('ia-cand-metier').value.trim();
   const loc = document.getElementById('ia-cand-loc').value.trim();
   const q = document.getElementById('ia-cand-q').value.trim();
+  const maxAge = document.getElementById('ia-cand-age').value;
+  const radius = document.getElementById('ia-cand-radius') ? document.getElementById('ia-cand-radius').value : '0';
   const list = document.getElementById('ia-cand-list');
   list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Recherche…</div>`;
 
   try {
     const data = await lbsAdminFetch('/admin/api/candidates-search', {
-      metier, location: loc, q, limit: 50,
+      metier, location: loc, q, max_age_months: maxAge, radius_km: radius, limit: 50,
     });
     window.__iaCandList = data.candidates || [];
+    if (!window.__iaCandList.length && parseInt(maxAge, 10) > 0) {
+      // Aucun résultat avec le filtre d'ancienneté → on regarde combien existent sans le filtre
+      let totalSansAge = 0;
+      try {
+        const d2 = await lbsAdminFetch('/admin/api/candidates-search', { metier, location: loc, q, max_age_months: 0, limit: 50 });
+        totalSansAge = (d2.candidates || []).length;
+      } catch {}
+      const ageTxt = document.querySelector('#ia-cand-age option:checked')?.textContent || `moins de ${maxAge} mois`;
+      list.innerHTML = `<div style="text-align:center;padding:26px;color:var(--muted);">
+        <div style="font-size:14px;color:var(--navy);margin-bottom:6px;">Aucun CV « ${ageTxt.replace('CV de ','')} » pour ces critères.</div>
+        ${totalSansAge ? `<div style="margin-bottom:12px;">Mais <strong>${totalSansAge}+ candidat(s)</strong> existent avec un CV plus ancien.</div>
+          <button class="btn btn-primary btn-sm" onclick="document.getElementById('ia-cand-age').value='0';ia_rechercherCandidats();">Voir tous les CV (sans filtre d'ancienneté)</button>
+          <div style="margin-top:8px;font-size:11px;">ou élargis le menu « Ancienneté » (6 mois, 1 an…)</div>`
+          : `<div>Essaie d'élargir les critères (métier, lieu, ancienneté).</div>`}
+      </div>`;
+      return;
+    }
     ia_afficherCandidats(window.__iaCandList);
   } catch (e) {
     list.innerHTML = `<div style="padding:20px;color:#c00;">❌ ${e.message}<br><br>Recharge la page MultiveRH (la session SSO a peut-être expiré).</div>`;
@@ -910,16 +1070,34 @@ function ia_afficherCandidats(cands) {
     list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);">Aucun candidat trouvé</div>`;
     return;
   }
+  // Calcule l'ancienneté lisible d'une date ISO (YYYY-MM-DD)
+  const ageLabel = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    const months = Math.max(0, Math.round((Date.now() - d.getTime()) / (1000*60*60*24*30.44)));
+    let txt, color;
+    if (months < 1) txt = 'CV < 1 mois';
+    else if (months < 12) txt = `CV ${months} mois`;
+    else { const y = Math.floor(months/12); txt = `CV ${y} an${y>1?'s':''}`; }
+    if (months <= 3) color = '#1e9e6a';        // récent = vert
+    else if (months <= 12) color = '#c98a00';   // moyen = orange
+    else color = '#b04632';                      // ancien = rouge
+    return `<span style="background:${color}1a;color:${color};font-weight:700;font-size:10px;padding:1px 6px;border-radius:4px;white-space:nowrap;">📅 ${txt}</span>`;
+  };
   let html = '';
   for (const c of cands) {
     const safe = s => (s || '').toString().replace(/"/g, '&quot;');
     const loc = [c.zipcode, c.city].filter(Boolean).join(' ');
     html += `<div onclick="ia_choisirCandidat(${c.id})" style="border-bottom:1px solid #eee;padding:10px 12px;cursor:pointer;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
-      <div style="font-weight:700;color:var(--navy);">${safe(c.first_name)} ${safe(c.last_name)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="font-weight:700;color:var(--navy);">${safe(c.first_name)} ${safe(c.last_name)}</div>
+        ${ageLabel(c.cv_date)}
+      </div>
       <div style="font-size:12px;color:var(--muted);margin-top:2px;">
         ${c.metier ? `💼 ${safe(c.metier)} ` : ''}
         ${loc ? `· 📍 ${safe(loc)} ` : ''}
-        ${c.updated_at ? `· maj ${c.updated_at}` : ''}
+        ${(c.distance_km !== null && c.distance_km !== undefined) ? `· <span style="color:#58A693;font-weight:600;">${c.distance_km} km</span> ` : ''}
+        ${c.cv_date ? `· CV ajouté le ${c.cv_date}` : (c.updated_at ? `· maj ${c.updated_at}` : '')}
       </div>
     </div>`;
   }
@@ -952,6 +1130,9 @@ function ia_displayCv(file) {
   }
   const url = URL.createObjectURL(file);
   window.__iaCvObjectUrl = url;
+  window.__iaCvFile = file;
+  window.__iaCvName = file.name;
+  window.__iaCvIsPdf = (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
 
   filename.textContent = file.name;
 
@@ -984,6 +1165,111 @@ function ia_clearCv() {
   document.getElementById('ia-cv-status').textContent = '';
 }
 
+// Affiche le bandeau "campagne" avec les CV sélectionnés dans la CVThèque MultiveRH
+function ia_renderCampaign(list) {
+  const banner = document.getElementById('ia-campaign-banner');
+  const chips = document.getElementById('ia-campaign-chips');
+  const count = document.getElementById('ia-campaign-count');
+  if (!banner || !chips) return;
+  if (count) count.textContent = list.length;
+  const active = window.STATE_CAMPAIGN_ACTIVE;
+  chips.innerHTML = list.map(function(c, i) {
+    const nom = (c.nom || ('CV #' + (c.id || '?'))).toString();
+    const meta = c.metier ? ' — ' + c.metier : '';
+    const label = (nom + meta).replace(/</g, '&lt;');
+    const on = (i === active);
+    return '<span title="Lancer la prospection pour ce candidat" ' +
+      'style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--brand-primary);border-radius:16px;padding:5px 10px;font-size:12px;' +
+      'background:' + (on ? 'var(--brand-primary)' : '#fff') + ';color:' + (on ? 'var(--on-brand)' : '#1a7a5e') + ';">' +
+      '<span onclick="ia_runCampaignCandidate(' + i + ')" style="cursor:pointer;">👤 ' + label + '</span>' +
+      '<span onclick="ia_removeCampaignCandidate(' + i + ')" title="Retirer ce CV" style="cursor:pointer;font-weight:800;opacity:.65;">✕</span>' +
+      '</span>';
+  }).join('');
+  banner.classList.remove('hidden');
+}
+
+// Retire un CV du bandeau campagne
+function ia_removeCampaignCandidate(idx) {
+  const list = window.STATE_CAMPAIGN || [];
+  if (idx < 0 || idx >= list.length) return;
+  list.splice(idx, 1);
+  // Ajuste l'index actif
+  if (window.STATE_CAMPAIGN_ACTIVE === idx) window.STATE_CAMPAIGN_ACTIVE = -1;
+  else if (window.STATE_CAMPAIGN_ACTIVE > idx) window.STATE_CAMPAIGN_ACTIVE--;
+  if (!list.length) {
+    const banner = document.getElementById('ia-campaign-banner');
+    if (banner) banner.classList.add('hidden');
+    return;
+  }
+  ia_renderCampaign(list);
+}
+
+// Bascule la prospection sur un candidat de la campagne (extrait le métier du CV si vide)
+async function ia_runCampaignCandidate(idx) {
+  const list = window.STATE_CAMPAIGN || [];
+  const c = list[idx];
+  if (!c) return;
+  window.STATE_CAMPAIGN_ACTIVE = idx;
+  ia_renderCampaign(list);
+  const mEl = document.getElementById('ia-metier');
+  const lEl = document.getElementById('ia-lieu');
+  let metier = (c.metier || '').trim();
+  let lieu = (c.lieu || '').trim();
+  if (!metier && c.id) {
+    try {
+      document.getElementById('ia-loading').classList.remove('hidden');
+      document.getElementById('ia-loading-text').textContent = 'Lecture du CV et détection du métier…';
+      document.getElementById('ia-results').innerHTML = '';
+    } catch (e) {}
+    try {
+      const x = await ia_extractMetierFromCandidate(c.id);
+      metier = (x.metier || '').trim();
+      if (!lieu) lieu = (x.lieu || '').trim();
+      c.metier = metier; c.lieu = lieu;
+      ia_renderCampaign(list); // met à jour le label du chip avec le métier détecté
+    } catch (e) {}
+  }
+  if (mEl) mEl.value = metier;
+  if (lEl) lEl.value = lieu;
+  if (!metier) {
+    try { document.getElementById('ia-loading').classList.add('hidden'); } catch (e) {}
+    showError('Métier introuvable pour ce CV — saisis-le manuellement puis relance.');
+    if (mEl) mEl.focus();
+    return;
+  }
+  lancerProspectionIA();
+}
+
+// Récupère le CV d'un candidat (CRM) et en déduit métier + domicile.
+// 1) "dernier poste" si renseigné · 2) sinon IA sur le TEXTE du CV · 3) sinon IA sur le PDF du CV.
+async function ia_extractMetierFromCandidate(id) {
+  const r = await apiFetch('/prospection/candidate-cv?id=' + encodeURIComponent(id));
+  const cv = await r.json();
+  let metier = (cv.last_job || '').trim();
+  let lieu = (cv.city || cv.zipcode || '').trim();
+
+  if (!metier && (cv.resume_text || cv.resume_pdf_b64)) {
+    const PROMPT = 'Analyse ce CV et renvoie UNIQUEMENT un JSON {"metier":"...", "localisation":"..."}.\n\n- "metier" : l\'intitulé de poste du candidat sous forme COURTE et STANDARD recherchable sur un site d\'emploi (2 à 4 mots maximum), déduit de son TITRE de CV et surtout de son DERNIER poste occupé. Exemples : "Responsable RH", "Comptable", "Infirmier", "Agent de transit", "Community Manager", "Chef de chantier". INTERDIT : les phrases, slogans, taglines, listes avec des "/", les mots comme "expérimenté/confirmé/senior/junior", les descriptions de missions. Donne juste le nom du métier.\n- "localisation" : le LIEU DE RÉSIDENCE du candidat (sa ville de domicile). PAS la ville de son employeur ni de ses expériences. Format : ville + code postal si dispo.';
+    // Contenu envoyé à l'IA : texte si dispo, sinon document PDF
+    const content = cv.resume_text
+      ? [{ type: 'text', text: PROMPT + '\n\n=== CV ===\n' + cv.resume_text }]
+      : [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: cv.resume_pdf_b64 } },
+         { type: 'text', text: PROMPT }];
+    try {
+      const res = await apiFetch('/claude/messages', {
+        method: 'POST',
+        body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 500, messages: [{ role: 'user', content }] }),
+      });
+      const j = await res.json();
+      const raw = j.content?.[0]?.text || '';
+      const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      if (parsed.metier) metier = parsed.metier;
+      if (!lieu && parsed.localisation) lieu = parsed.localisation;
+    } catch (e) {}
+  }
+  return { metier, lieu };
+}
+
 async function lancerProspectionIA() {
   const metier = document.getElementById('ia-metier').value.trim();
   const lieu = document.getElementById('ia-lieu').value.trim();
@@ -1002,11 +1288,16 @@ async function lancerProspectionIA() {
       window.__iaServiceLabel = dj.label || 'responsable métier';
     } catch {}
 
+    // Un seul appel : les 3 tiers (recrutement actif + secteur + grandes entreprises)
+    // sont déjà calculés EN PARALLÈLE côté serveur → rapide ET fiable.
+    const radiusEl = document.getElementById('ia-radius');
+    const radius_km = radiusEl ? parseInt(radiusEl.value, 10) || 0 : 0;
     const r = await apiFetch('/prospection/companies-from-cv', {
       method: 'POST',
-      body: JSON.stringify({ metier, lieu, limit_per_tier: 40 }),
+      body: JSON.stringify({ metier, lieu, radius_km, limit_per_tier: 40 }),
     });
     const data = await r.json();
+
     data.metier = metier;
     data.lieu = lieu;
     document.getElementById('ia-loading').classList.add('hidden');
@@ -1015,6 +1306,21 @@ async function lancerProspectionIA() {
     document.getElementById('ia-loading').classList.add('hidden');
     showError('Erreur prospection : ' + e.message);
   }
+}
+
+// Pré-charge les Tier 2/3 (secteur + grandes entreprises) — relancé seulement si métier/lieu change.
+// Stocké en cache navigateur ; l'import en base se fait au rendu (renderProspectionResults).
+let __iaSectorPrefetch = null;
+function ia_prefetchSector(metier, lieu) {
+  if (!metier) return Promise.resolve(null);
+  const key = (metier + '|' + (lieu || '')).toLowerCase().trim();
+  if (__iaSectorPrefetch && __iaSectorPrefetch.key === key) return __iaSectorPrefetch.promise;
+  const promise = apiFetch('/prospection/companies-from-cv', {
+    method: 'POST',
+    body: JSON.stringify({ metier, lieu, mode: 'sector', limit_per_tier: 40 }),
+  }).then(r => r.json()).catch(() => null);
+  __iaSectorPrefetch = { key, promise };
+  return promise;
 }
 
 // Badge source de l'offre (logo + couleur par plateforme)
@@ -1043,10 +1349,15 @@ function ia_ensureOfferPopup() {
   if (!p) {
     p = document.createElement('div');
     p.id = 'offer-popup';
-    p.style.cssText = 'position:fixed;z-index:99999;display:none;background:#fff;border:1px solid var(--brand);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.22);width:380px;max-height:60vh;overflow-y:auto;padding:14px;font-size:12px;color:var(--navy);line-height:1.5;';
+    p.style.cssText = 'position:fixed;z-index:99999;display:none;background:#fff;border:1px solid var(--brand);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.22);width:380px;max-height:60vh;overflow-y:auto;padding:14px;font-size:12px;color:var(--navy);line-height:1.5;cursor:pointer;';
     // Reste ouvert si on entre dans le popup
     p.onmouseenter = () => { if (__offerPopupTimer) clearTimeout(__offerPopupTimer); };
     p.onmouseleave = () => ia_hideOfferPopup();
+    // Clic sur la bulle = ouvre la vue plein écran (offre + CV), sauf si on clique un lien
+    p.onclick = (e) => {
+      if (e.target.closest('a')) return; // laisser passer les liens "voir l'offre"
+      if (window.__offerPopupCur) { ia_openOfferSplit(window.__offerPopupCur.ti, window.__offerPopupCur.ci); ia_hideOfferPopup(); }
+    };
     document.body.appendChild(p);
   }
   return p;
@@ -1055,9 +1366,11 @@ function ia_showOfferPopup(ev, ti, ci) {
   const c = window.__iaResultsData?.tiers?.[ti]?.companies?.[ci];
   if (!c || !c.offer_title) return;
   if (__offerPopupTimer) clearTimeout(__offerPopupTimer);
+  window.__offerPopupCur = { ti, ci };
   const p = ia_ensureOfferPopup();
   const esc = s => (s || '').replace(/</g, '&lt;');
   p.innerHTML = `
+    <div style="background:#eafaf4;color:#2a8a72;font-weight:700;font-size:11px;text-align:center;padding:5px;border-radius:6px;margin-bottom:8px;">🔍 Cliquer pour ouvrir l'offre + le CV côte à côte</div>
     <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:8px;">
       <div style="font-weight:800;color:var(--brand);font-size:13px;">${esc(c.offer_title)}</div>
       ${ia_sourceBadge(c)}
@@ -1088,6 +1401,388 @@ function ia_hideOfferPopup() {
   }, 150);
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  Vue DIAPORAMA : CV à droite, client + contacts + offre à gauche.
+//  Navigation entre sociétés : flèches ⬅️➡️ ou clic sur les chevrons.
+// ════════════════════════════════════════════════════════════════════
+// Clic n'importe où sur la fiche société → ouvre le diaporama, sauf sur un bouton/lien
+function ia_cardClick(e, ti, ci) {
+  if (e.target.closest('a,button,input,select,textarea')) return;
+  ia_openOfferSplit(ti, ci);
+}
+
+function ia_buildOfferList() {
+  const list = [];
+  const data = window.__iaResultsData;
+  if (!data) return list;
+  for (let ti = 0; ti < data.tiers.length; ti++)
+    for (let ci = 0; ci < (data.tiers[ti].companies || []).length; ci++)
+      list.push([ti, ci]);
+  return list;
+}
+
+function ia_openOfferSplit(ti, ci) {
+  if (__offerPopupTimer) clearTimeout(__offerPopupTimer);
+  const pp = document.getElementById('offer-popup'); if (pp) pp.style.display = 'none';
+
+  window.__offerSplitList = ia_buildOfferList();
+  window.__offerSplitIdx = window.__offerSplitList.findIndex(([t, c]) => t === ti && c === ci);
+  if (window.__offerSplitIdx < 0) window.__offerSplitIdx = 0;
+
+  // Colonne CV (droite) — construite une seule fois, stable pendant la navigation
+  let cvHtml;
+  if (window.__iaCvIsPdf && window.__iaCvObjectUrl) {
+    cvHtml = `<embed src="${window.__iaCvObjectUrl}#toolbar=1&navpanes=0" type="application/pdf" style="width:100%;height:100%;min-height:100%;border:none;">`;
+  } else if (window.__iaCvFile && !window.__iaCvIsPdf) {
+    cvHtml = `<pre id="offer-split-cvtext" style="padding:14px;font-size:12px;line-height:1.5;white-space:pre-wrap;color:var(--navy);margin:0;">Chargement…</pre>`;
+  } else {
+    cvHtml = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:13px;text-align:center;padding:20px;">Aucun CV déposé.<br>Dépose un CV pour le voir ici à côté de l'offre.</div>`;
+  }
+
+  let modal = document.getElementById('offer-split-modal');
+  if (modal) modal.remove();
+  modal = document.createElement('div');
+  modal.id = 'offer-split-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(20,30,28,0.55);display:flex;align-items:center;justify-content:center;padding:18px;';
+  modal.onclick = (e) => { if (e.target === modal) ia_closeOfferSplit(); };
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;width:min(1320px,97vw);height:min(900px,93vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.35);position:relative;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border);background:#fafdfc;">
+        <div id="offer-split-title" style="font-weight:800;color:var(--brand);font-size:14px;"></div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span id="offer-split-counter" style="font-size:12px;color:var(--muted);"></span>
+          <button onclick="ia_closeOfferSplit()" title="Fermer (Échap)" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;line-height:1;">×</button>
+        </div>
+      </div>
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;">
+        <div id="offer-split-left" style="overflow-y:auto;padding:0 22px 18px;"></div>
+        <div style="overflow:hidden;background:#f4f5f6;border-left:1px solid var(--border);">${cvHtml}</div>
+      </div>
+      <button onclick="ia_offerSplitNav(-1)" title="Précédent (←)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:6;background:rgba(255,255,255,0.95);border:1px solid var(--border);border-radius:50%;width:44px;height:44px;font-size:24px;line-height:1;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18);color:var(--brand);">‹</button>
+      <button onclick="ia_offerSplitNav(1)" title="Suivant (→)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:6;background:rgba(255,255,255,0.95);border:1px solid var(--border);border-radius:50%;width:44px;height:44px;font-size:24px;line-height:1;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18);color:var(--brand);">›</button>
+    </div>`;
+  document.body.appendChild(modal);
+
+  if (window.__iaCvFile && !window.__iaCvIsPdf) {
+    const reader = new FileReader();
+    reader.onload = e => { const pre = document.getElementById('offer-split-cvtext'); if (pre) pre.textContent = e.target.result || ''; };
+    reader.readAsText(window.__iaCvFile);
+  }
+
+  // Clavier : Échap ferme, ←/→ naviguent
+  window.__offerSplitKey = (e) => {
+    if (e.key === 'Escape') ia_closeOfferSplit();
+    else if (e.key === 'ArrowRight') { e.preventDefault(); ia_offerSplitNav(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); ia_offerSplitNav(-1); }
+  };
+  document.addEventListener('keydown', window.__offerSplitKey);
+
+  ia_renderOfferSplit();
+}
+
+function ia_offerSplitNav(delta) {
+  const list = window.__offerSplitList || [];
+  if (!list.length) return;
+  let i = (window.__offerSplitIdx || 0) + delta;
+  if (i < 0) i = list.length - 1;
+  if (i >= list.length) i = 0;
+  window.__offerSplitIdx = i;
+  ia_renderOfferSplit();
+  const left = document.getElementById('offer-split-left');
+  if (left) left.scrollTop = 0;
+}
+
+// Rendu du contenu de la colonne gauche (client + contacts + offre) pour la société courante
+function ia_renderOfferSplit() {
+  const list = window.__offerSplitList || [];
+  const idx = window.__offerSplitIdx || 0;
+  const pair = list[idx];
+  if (!pair) return;
+  const [ti, ci] = pair;
+  const c = window.__iaResultsData?.tiers?.[ti]?.companies?.[ci];
+  if (!c) return;
+  const esc = s => (s || '').replace(/</g, '&lt;');
+  const ville = c.city || c.ville || '';
+  const adresse = [c.address, [c.zipcode, ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const tierLabel = c.tier_label || (window.__iaResultsData.tiers[ti] && window.__iaResultsData.tiers[ti].label) || '';
+
+  const phoneHtml = c.phone
+    ? `<a href="tel:${c.phone.replace(/[^+\d]/g,'')}" style="color:var(--brand);font-weight:600;">📞 ${esc(c.phone)}</a>`
+    : `<span style="color:#999;">téléphone non trouvé</span>`;
+
+  const leftHtml = `
+    <!-- Barre collante : navigation + fermer (toujours visible) -->
+    <div style="position:sticky;top:0;z-index:10;background:#fff;margin:0 -22px 12px;padding:10px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div style="display:flex;gap:6px;">
+        <button onclick="ia_offerSplitNav(-1)" title="Précédent (←)" style="border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:13px;font-weight:700;color:var(--brand);">‹ Préc.</button>
+        <button onclick="ia_offerSplitNav(1)" title="Suivant (→)" style="border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:13px;font-weight:700;color:var(--brand);">Suiv. ›</button>
+      </div>
+      <span id="offer-split-counter2" style="font-size:11px;color:var(--muted);"></span>
+      <button onclick="ia_closeOfferSplit()" title="Fermer (Échap)" style="border:none;background:#e9514b;color:#fff;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:700;">✕ Fermer</button>
+    </div>
+    <!-- Contacts RH / responsables (en haut, demandé) -->
+    <div style="background:#f3faf7;border:1px solid #cfe9df;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      <div style="font-weight:800;color:var(--brand);font-size:13px;margin-bottom:8px;">👥 Contacts à cibler</div>
+      <div id="offer-split-contacts">${ia_renderSplitContacts(c)}</div>
+    </div>
+    <!-- Carte client -->
+    <div style="background:#fafdfc;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-weight:800;color:var(--navy);font-size:16px;margin-bottom:2px;">🏢 ${esc(c.name || '')}</div>
+      ${adresse ? `<div style="color:var(--muted);font-size:12px;margin-bottom:8px;">📍 ${esc(adresse)}</div>` : ''}
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;">
+        <div>${phoneHtml}</div>
+        ${c.website ? `<div>🌐 <a href="${esc(c.website)}" target="_blank" style="color:#58A693;">${esc(c.website)}</a></div>` : ''}
+        ${c.siret ? `<div style="color:var(--muted);">SIRET : ${esc(c.siret)}</div>` : ''}
+        ${c.naf ? `<div style="color:var(--muted);">APE/NAF : ${esc(c.naf)}</div>` : ''}
+        ${c.workforce ? `<div style="color:var(--muted);">Effectif : ${esc(c.workforce)}</div>` : ''}
+      </div>
+    </div>
+    <!-- Carte offre (si présente) -->
+    ${c.offer_title ? `<div style="background:#fff;border:1px solid var(--brand);border-radius:10px;padding:18px 20px;">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${ia_sourceBadge(c)}</div>
+      <div style="font-weight:800;color:var(--brand);font-size:18px;line-height:1.3;margin-bottom:10px;">${esc(c.offer_title)}</div>
+      <div style="margin-bottom:14px;display:flex;gap:7px;flex-wrap:wrap;">
+        ${c.offer_contract ? `<span style="background:#fff5ed;color:#d04a13;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">${esc(c.offer_contract)}</span>` : ''}
+        ${c.offer_salary ? `<span style="background:#e9f5f1;color:#2a8a72;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">💰 ${esc(c.offer_salary)}</span>` : ''}
+        ${ville ? `<span style="background:#eef2f0;color:#5b6b66;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">📍 ${esc(ville)}</span>` : ''}
+      </div>
+      <div style="font-size:13.5px;">${ia_formatOfferText(c.offer_description)}</div>
+      ${c.offer_url ? `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);"><a href="${esc(c.offer_url)}" target="_blank" class="btn btn-warn btn-sm" style="font-size:12px;text-decoration:none;">→ Voir l'offre complète sur le site</a></div>` : ''}
+    </div>` : `<div style="color:#999;font-size:12px;font-style:italic;">Pas d'offre d'emploi associée à cette société (prospection secteur).</div>`}`;
+
+  const leftEl = document.getElementById('offer-split-left');
+  if (leftEl) leftEl.innerHTML = leftHtml;
+  const titleEl = document.getElementById('offer-split-title');
+  if (titleEl) titleEl.innerHTML = `📋 ${esc(c.name || '')}${tierLabel ? ` · <span style="font-weight:400;color:var(--muted);">${esc(tierLabel)}</span>` : ''}`;
+  const counterTxt = `${idx + 1} / ${list.length}  ·  ← → pour naviguer`;
+  const counterEl = document.getElementById('offer-split-counter');
+  if (counterEl) counterEl.textContent = counterTxt;
+  const counterEl2 = document.getElementById('offer-split-counter2');
+  if (counterEl2) counterEl2.textContent = counterTxt;
+
+  // Charge le descriptif complet de l'offre si la source ne donne qu'un extrait
+  ia_fetchFullOffer(ti, ci);
+
+  // Recherche auto des contacts (RH + responsable) si pas encore fait
+  if (!c.__enrich && !c.__enrichLoading) ia_enrichForSplit(ti, ci);
+}
+
+// Récupère le descriptif COMPLET de l'offre depuis le site source (France Travail/APEC/…)
+async function ia_fetchFullOffer(ti, ci) {
+  const c = window.__iaResultsData?.tiers?.[ti]?.companies?.[ci];
+  if (!c || !c.offer_url || c.__fullOfferDone) return;
+  const desc = c.offer_description || '';
+  // Si le texte est déjà long (> 600 car.) on considère qu'il est complet
+  if (desc.length > 600) { c.__fullOfferDone = true; return; }
+  c.__fullOfferDone = true;
+  try {
+    const r = await apiFetch('/prospection/offer-full?url=' + encodeURIComponent(c.offer_url));
+    const j = await r.json();
+    if (j && j.description && j.description.length > desc.length) {
+      c.offer_description = j.description;
+      // Re-rend si la modale affiche encore cette offre
+      const cur = (window.__offerSplitList || [])[window.__offerSplitIdx || 0];
+      if (cur && cur[0] === ti && cur[1] === ci) ia_renderOfferSplit();
+    }
+  } catch (e) {}
+}
+
+// Met en forme le descriptif d'une offre : titres de sections, paragraphes aérés, puces
+function ia_formatOfferText(raw) {
+  const esc = s => (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  if (!raw || !raw.trim()) return `<i style="color:#999;">Pas de description capturée pour cette offre. Ouvre l'offre sur le site source pour le détail complet.</i>`;
+  // Insère des retours si le texte est un seul bloc collé (avant les titres fréquents et les puces)
+  let txt = raw.replace(/\r/g, '');
+  txt = txt.replace(/\s*([•▪‣])\s*/g, '\n$1 ');
+  const headingWords = '(profil(?:\\s+recherch[ée])?|votre profil|le profil|vos missions?|missions?|description du poste|le poste|votre r[ôo]le|comp[ée]tences?(?:\\s+requises)?|qualit[ée]s?(?:\\s+requises)?|exp[ée]riences?|formation|dipl[ôo]mes?|r[ée]mun[ée]ration|salaire|avantages?|ce que nous (?:offrons|proposons)|nous vous proposons|conditions|environnement|à propos|a propos|l[\'e]entreprise|type de contrat|contrat|horaires?|lieu(?: de travail)?|savoir[- ]?[êe]tre|savoir[- ]?faire)';
+  const headingRe = new RegExp('^' + headingWords + '\\b[^\\n]{0,40}:?\\s*$', 'i');
+  const lines = txt.split('\n');
+  let html = '', buf = [];
+  const flush = () => { if (buf.length) { html += `<p style="margin:0 0 11px;line-height:1.65;color:#2c3a36;">${buf.join('<br>')}</p>`; buf = []; } };
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) { flush(); continue; }
+    const isHeading = (headingRe.test(t) && t.length < 60) || (/:$/.test(t) && t.length < 48 && t.split(' ').length <= 6);
+    if (isHeading) {
+      flush();
+      html += `<div style="font-weight:800;color:var(--brand);font-size:13px;margin:14px 0 6px;border-bottom:1px solid #e4efea;padding-bottom:3px;">${esc(t.replace(/:\s*$/, ''))}</div>`;
+      continue;
+    }
+    if (/^[-•*·▪‣–]\s+/.test(t)) {
+      flush();
+      html += `<div style="display:flex;gap:8px;margin:0 0 5px;line-height:1.55;color:#2c3a36;"><span style="color:#58A693;flex:none;">•</span><span>${esc(t.replace(/^[-•*·▪‣–]\s+/, ''))}</span></div>`;
+      continue;
+    }
+    buf.push(esc(t));
+  }
+  flush();
+  return html;
+}
+
+// Rendu des contacts (RH/DRH + responsable métier) pour la colonne gauche
+function ia_renderSplitContacts(c) {
+  const esc = s => (s || '').replace(/</g, '&lt;');
+  if (!c.__enrich) {
+    return `<div style="color:var(--muted);font-style:italic;font-size:12px;padding:4px 0;">⏳ Recherche des RH / responsables…</div>`;
+  }
+  const roleLabel = (r) => r === 'drh' ? '👤 RH / DRH' : r === 'compta' ? '🧮 Responsable comptable' :
+    r === 'paie' ? '💰 Responsable paie' : r === 'commercial' ? '💼 Directeur commercial' :
+    r === 'it' ? '💻 Responsable IT' : r === 'marketing' ? '📣 Responsable marketing' :
+    r === 'medical' ? '⚕️ Responsable médical' : r === 'sante' ? '🏥 Responsable santé' : '🎯 ' + r;
+  let html = '';
+  for (const role of Object.keys(c.__enrich)) {
+    const res = c.__enrich[role] || {};
+    const people = (res.emails_generated && res.emails_generated.length) ? res.emails_generated : (res.people || []);
+    html += `<div style="margin-bottom:8px;">
+      <div style="font-weight:700;color:var(--brand);font-size:12px;margin-bottom:3px;">${roleLabel(role)} <span style="color:var(--muted);font-weight:400;">(${people.length})</span></div>`;
+    if (!people.length) {
+      html += `<div style="font-size:11px;color:var(--muted);font-style:italic;">Aucun contact trouvé</div>`;
+    } else {
+      // Trie : contacts de la base d'abord, puis web
+      const sorted = people.slice().sort((a, b) => {
+        const ab = (a.source === 'multiverh_db' || a.in_base) ? 0 : 1;
+        const bb = (b.source === 'multiverh_db' || b.in_base) ? 0 : 1;
+        return ab - bb;
+      });
+      for (const p of sorted.slice(0, 8)) {
+        const name = (p.name || ((p.first_name || '') + ' ' + (p.last_name || ''))).trim();
+        const isBase = p.source === 'multiverh_db' || p.in_base || res.from_db;
+        const badge = isBase
+          ? '<span style="background:#e9f5f1;color:#2a8a72;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;margin-left:6px;white-space:nowrap;">🗄️ COMPTE CLIENT</span>'
+          : '<span style="background:#e8f1fb;color:#0a66c2;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;margin-left:6px;white-space:nowrap;">🌐 WEB</span>';
+        const tel = (p.phone || '').replace(/[^+\d]/g, '');
+        html += `<div style="background:${isBase ? '#f3faf7' : '#fff'};border:1px solid ${isBase ? '#cfe9df' : '#e8efed'};border-left:3px solid ${isBase ? '#2a8a72' : '#0a66c2'};border-radius:6px;padding:6px 8px;margin-bottom:4px;font-size:12px;">
+          <div style="font-weight:700;color:var(--navy);">${esc(name)}${badge}${p.title ? `<span style="font-weight:400;color:var(--muted);font-size:11px;"> · ${esc(p.title)}</span>` : ''}</div>
+          ${p.phone ? `<div style="font-size:11px;">📞 <a href="tel:${tel}" style="color:var(--brand);font-weight:600;">${esc(p.phone)}</a></div>` : ''}
+          ${p.email ? `<div style="font-size:11px;">✉️ <a href="mailto:${esc(p.email)}" style="color:#2a8a72;">${esc(p.email)}</a></div>` : ''}
+          ${p.linkedin ? `<div style="font-size:11px;">💼 <a href="${esc(p.linkedin)}" target="_blank" style="color:#0a66c2;">LinkedIn</a></div>` : ''}
+        </div>`;
+      }
+    }
+    html += `</div>`;
+  }
+  return html || `<div style="color:var(--muted);font-size:12px;">Aucun contact.</div>`;
+}
+
+// Met à jour le compteur de chaque tier : (visibles / total) après filtrage
+function ia_updateTierCounts() {
+  const data = window.__iaResultsData;
+  if (!data) return;
+  for (let ti = 0; ti < data.tiers.length; ti++) {
+    const span = document.getElementById('tier-count-' + ti);
+    if (!span) continue;
+    const total = parseInt(span.dataset.total || '0', 10);
+    let visible = 0;
+    for (const c of (data.tiers[ti].companies || [])) {
+      const card = document.getElementById(c.__cardId);
+      if (card && card.style.display !== 'none') visible++;
+    }
+    span.innerHTML = (visible < total)
+      ? `(<strong style="color:#2a8a72;">${visible}</strong> avec contact / ${total})`
+      : `(${total})`;
+  }
+}
+
+// Une société a-t-elle au moins un contact (base ou web) ?
+function ia_companyHasContact(c) {
+  if (!c || !c.__enrich) return false;
+  return Object.values(c.__enrich).some(r => r && (
+    (r.emails_generated && r.emails_generated.length) || (r.people && r.people.length)
+  ));
+}
+
+// Filtre : ne garder que les sociétés avec un contact joignable (base d'abord, web ensuite).
+async function ia_filterByContact(auto) {
+  const data = window.__iaResultsData;
+  if (!data) return;
+  const btn = document.getElementById('ia-btn-filter-contact');
+
+  // Bascule : si déjà filtré → tout réafficher (sauf en mode auto)
+  if (!auto && btn && btn.dataset.filtered === '1') {
+    for (const tier of data.tiers) for (const c of (tier.companies || [])) {
+      const card = document.getElementById(c.__cardId);
+      if (card) card.style.display = '';
+    }
+    btn.dataset.filtered = '';
+    btn.textContent = '🎯 Avec contact uniquement';
+    btn.style.background = '#2a8a72';
+    ia_updateTierCounts();
+    return;
+  }
+
+  const pairs = [];
+  for (let ti = 0; ti < data.tiers.length; ti++)
+    for (let ci = 0; ci < (data.tiers[ti].companies || []).length; ci++) pairs.push([ti, ci]);
+  if (!pairs.length) return;
+
+  if (!auto && !confirm(`Rechercher les contacts de ${pairs.length} sociétés (base + web) puis masquer celles sans contact ?\n\nLes sociétés déjà en base sont gratuites ; les autres utilisent la recherche web.`)) return;
+
+  if (btn) { btn.dataset.filtered = '1'; btn.style.background = '#1e6b58'; }
+  let idx = 0, done = 0, kept = 0, hidden = 0;
+  async function worker() {
+    while (idx < pairs.length) {
+      const [ti, ci] = pairs[idx++];
+      try { await ia_enrichForSplit(ti, ci); } catch (e) {}
+      done++;
+      // Masquage PROGRESSIF : dès qu'une société est traitée, on la masque si aucun contact
+      const c = data.tiers[ti].companies[ci];
+      const card = document.getElementById(c.__cardId);
+      if (card) {
+        if (ia_companyHasContact(c)) { kept++; }
+        else { card.style.display = 'none'; hidden++; }
+      }
+      if (btn) btn.textContent = `⏳ ${done}/${pairs.length} · ${kept} avec contact`;
+      if (done % 4 === 0) ia_updateTierCounts(); // rafraîchit les compteurs régulièrement
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(5, pairs.length) }, worker));
+  ia_updateTierCounts();
+  if (btn) btn.textContent = `✓ ${kept} avec contact · ${hidden} masquées (cliquer pour tout afficher)`;
+}
+
+// Enrichit (DRH + responsable métier) en arrière-plan et met à jour la colonne gauche
+async function ia_enrichForSplit(ti, ci) {
+  const c = window.__iaResultsData?.tiers?.[ti]?.companies?.[ci];
+  if (!c || c.__enrich || c.__enrichLoading) return;
+  c.__enrichLoading = true;
+  const roles = ['drh'];
+  const sp = window.__iaServicePreset;
+  if (sp && sp !== 'drh') roles.push(sp);
+  try {
+    const enr = {};
+    await Promise.all(roles.map(async role => {
+      const r = await apiFetch('/prospection/enrich-cascade', {
+        method: 'POST',
+        body: JSON.stringify({ company: { name: c.name, website: c.website || '', siret: c.siret || '' }, role }),
+      });
+      enr[role] = await r.json();
+    }));
+    c.__enrich = enr;
+  } catch (e) {
+    c.__enrich = c.__enrich || {};
+  }
+  c.__enrichLoading = false;
+  // Met à jour la modale si elle affiche encore cette société
+  const cur = (window.__offerSplitList || [])[window.__offerSplitIdx || 0];
+  if (cur && cur[0] === ti && cur[1] === ci) {
+    const div = document.getElementById('offer-split-contacts');
+    if (div) div.innerHTML = ia_renderSplitContacts(c);
+  }
+  // Met aussi à jour la carte derrière (si visible)
+  const cid = c.__cardId || `card-${ti}-${ci}`;
+  const tgt = document.getElementById(`enrich-${cid}`);
+  if (tgt && c.__enrich) { try { renderEnrichResultSmart(tgt, c, ti, ci, Object.keys(c.__enrich)); } catch (e) {} }
+}
+
+function ia_closeOfferSplit() {
+  const modal = document.getElementById('offer-split-modal');
+  if (modal) modal.remove();
+  if (window.__offerSplitKey) {
+    document.removeEventListener('keydown', window.__offerSplitKey);
+    window.__offerSplitKey = null;
+  }
+}
+
 function renderProspectionResults(data) {
   const container = document.getElementById('ia-results');
   window.__iaResultsData = data;
@@ -1106,6 +1801,7 @@ function renderProspectionResults(data) {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-purple btn-sm" onclick="ia_enrichAllSmart()" id="ia-btn-enrich-smart" title="Cherche d'abord en base MultiveRH, sinon Google. Auto-import dans la base.">⚡ Tout enrichir (DRH + responsable métier)</button>
+        <button class="btn btn-sm" id="ia-btn-filter-contact" onclick="ia_filterByContact()" style="background:#2a8a72;color:#fff;border:none;" title="Cherche les contacts (base puis web) et masque les sociétés sans aucun contact joignable">🎯 Avec contact uniquement</button>
         <button class="btn btn-warn btn-sm" onclick="ia_genererEmailing()" title="Génère un mailing avec tous les contacts enrichis">✉️ Générer emailing</button>
         <button class="btn btn-purple btn-sm" onclick="ia_exportCsv()">📥 CSV</button>
       </div>
@@ -1124,7 +1820,7 @@ function renderProspectionResults(data) {
     html += `<details ${openAttr} class="card tier-details" style="margin-bottom:14px;">
       <summary style="cursor:pointer;font-weight:800;color:var(--brand);list-style:none;display:flex;align-items:center;gap:8px;user-select:none;">
         <span class="tier-caret" style="transition:transform 0.15s;">▶</span>
-        ${tier.label} <span style="color:var(--muted);font-weight:400;">(${cs.length})</span>
+        ${tier.label} <span id="tier-count-${ti}" data-total="${cs.length}" style="color:var(--muted);font-weight:400;">(${cs.length})</span>
       </summary>
       <div style="margin-top:12px;">`;
     if (cs.length === 0) {
@@ -1135,7 +1831,7 @@ function renderProspectionResults(data) {
         const c = cs[ci];
         const cid = `card-${ti}-${ci}`;
         c.__cardId = cid;
-        html += `<div id="${cid}" style="background:#fafdfc;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;">
+        html += `<div id="${cid}" onclick="ia_cardClick(event, ${ti}, ${ci})" title="Cliquer la fiche pour ouvrir l'offre + le CV + les contacts" style="background:#fafdfc;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;cursor:pointer;transition:box-shadow .12s,border-color .12s;" onmouseover="this.style.boxShadow='0 2px 10px rgba(88,166,147,.25)';this.style.borderColor='#58A693';" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)';">
           <div style="font-weight:700;color:var(--navy);margin-bottom:3px;">${c.name || ''}</div>
           <div style="color:var(--muted);">${c.city || c.ville || ''} ${c.zipcode ? '· '+c.zipcode : ''}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;align-items:center;">
@@ -1145,10 +1841,11 @@ function renderProspectionResults(data) {
           ${c.offer_title ? `<div style="margin-top:5px;" onmouseenter="ia_showOfferPopup(event, ${ti}, ${ci})" onmouseleave="ia_hideOfferPopup()">
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
               ${ia_sourceBadge(c)}
-              ${c.offer_url ? `<a href="${c.offer_url}" target="_blank" style="color:#FF5A1F;text-decoration:none;font-size:11px;font-weight:600;">${c.offer_title}${c.offer_contract ? ' · '+c.offer_contract : ''}</a>` : `<span style="color:#FF5A1F;font-size:11px;font-weight:600;">${c.offer_title}</span>`}
+              <span style="color:#FF5A1F;font-size:11px;font-weight:600;">${c.offer_title}${c.offer_contract ? ' · '+c.offer_contract : ''}</span>
             </div>
-            ${c.offer_description ? `<div style="color:var(--muted);font-size:10px;line-height:1.35;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:help;">${c.offer_description.slice(0,140)}…</div>` : `<div style="color:#bbb;font-size:10px;margin-top:2px;font-style:italic;">Survole pour voir l'offre · clique pour l'ouvrir</div>`}
+            ${c.offer_description ? `<div style="color:var(--muted);font-size:10px;line-height:1.35;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.offer_description.slice(0,140)}…</div>` : ''}
           </div>` : ''}
+          <div style="color:#58A693;font-size:10px;margin-top:4px;font-weight:600;">🔍 Cliquer la fiche : offre + CV + contacts</div>
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-purple btn-sm" style="padding:4px 8px;font-size:11px;" onclick="ia_enrichCompanySmart(${ti}, ${ci})">⚡ Enrichir (DRH + ${window.__iaServiceLabel || 'responsable métier'})</button>
           </div>
@@ -1165,6 +1862,43 @@ function renderProspectionResults(data) {
 
   // ── Import automatique de toutes les sociétés en base (+ téléphones) ──
   ia_autoImportAll(data);
+
+  // ── Aperçu d'abord : on laisse l'utilisateur voir les sociétés, PUIS (2e temps) on lance
+  //    l'enrichissement progressif qui masque au fur et à mesure celles sans contact. ──
+  setTimeout(() => ia_filterByContact(true), 1500);
+}
+
+// Enrichit TOUTES les sociétés en arrière-plan (sans confirmation) : noms RH + responsable
+// opérationnel trouvés via LinkedIn/Google et stockés en base automatiquement.
+async function ia_autoEnrichAll() {
+  const data = window.__iaResultsData;
+  if (!data || window.__iaAutoEnrichRunning) return;
+  window.__iaAutoEnrichRunning = true;
+  const pairs = [];
+  for (let ti = 0; ti < data.tiers.length; ti++)
+    for (let ci = 0; ci < (data.tiers[ti].companies || []).length; ci++) {
+      const c = data.tiers[ti].companies[ci];
+      if (c && !c.__enrich && !c.__enrichLoading) pairs.push([ti, ci]);
+    }
+  if (!pairs.length) { window.__iaAutoEnrichRunning = false; return; }
+  const btn = document.getElementById('ia-btn-enrich-smart');
+  const serviceLabel = window.__iaServiceLabel || 'responsable métier';
+  const status = document.getElementById('ia-cv-status');
+  let done = 0, idx = 0;
+  const CONC = 5;
+  async function worker() {
+    while (idx < pairs.length) {
+      const [ti, ci] = pairs[idx++];
+      try { await ia_enrichForSplit(ti, ci); } catch (e) {}
+      done++;
+      if (status) status.textContent = `🔎 Contacts RH/${serviceLabel} : ${done}/${pairs.length}…`;
+      if (btn && !btn.disabled) btn.textContent = `🔎 Contacts ${done}/${pairs.length}…`;
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONC, pairs.length) }, worker));
+  window.__iaAutoEnrichRunning = false;
+  if (btn) btn.textContent = `⚡ Tout enrichir (DRH + ${serviceLabel})`;
+  if (status) status.textContent = `✅ Contacts trouvés pour ${pairs.length} sociétés (RH + ${serviceLabel})`;
 }
 
 // Importe automatiquement toutes les sociétés des 3 tiers en base MultiveRH (avec tél)
@@ -1775,15 +2509,20 @@ async function ia_enrichAllSmart() {
   }
   if (!all.length) return;
   const serviceLabel = window.__iaServiceLabel || 'responsable métier';
-  if (!confirm(`Enrichir ${all.length} sociétés avec DRH + ${serviceLabel} ?\n\n100% gratuit (Google). ~${Math.ceil(all.length * 16 / 60)} min.`)) return;
+  const CONCURRENCY = 5; // enrichissements en parallèle (≈5× plus rapide)
+  if (!confirm(`Enrichir ${all.length} sociétés avec DRH + ${serviceLabel} ?\n\n100% gratuit (Google). ~${Math.max(1, Math.ceil(all.length * 14 / 60 / CONCURRENCY))} min.`)) return;
   const btn = document.getElementById('ia-btn-enrich-smart');
   if (btn) { btn.disabled = true; }
-  for (let i = 0; i < all.length; i++) {
-    const [ti, ci] = all[i];
-    if (btn) btn.textContent = `⏳ ${i+1}/${all.length}…`;
-    await ia_enrichCompanySmart(ti, ci);
-    await new Promise(r => setTimeout(r, 500));
+  let done = 0, idx = 0;
+  async function worker() {
+    while (idx < all.length) {
+      const [ti, ci] = all[idx++];
+      try { await ia_enrichCompanySmart(ti, ci); } catch (e) {}
+      done++;
+      if (btn) btn.textContent = `⏳ ${done}/${all.length}…`;
+    }
   }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, all.length) }, worker));
   if (btn) { btn.disabled = false; btn.textContent = `⚡ Tout enrichir (DRH + ${serviceLabel})`; }
   alert(`✅ Enrichissement terminé sur ${all.length} sociétés`);
 }
@@ -1969,27 +2708,63 @@ async function fp_ouvrirSelecteurOffres() {
   const modal = document.createElement('div');
   modal.id = 'fp-mv-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  const inp = 'padding:8px 12px;border:1px solid var(--border);border-radius:6px;width:100%;box-sizing:border-box;';
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;padding:18px;">
+    <div style="background:#fff;border-radius:12px;max-width:920px;width:100%;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;padding:18px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div style="font-size:18px;font-weight:800;color:var(--brand);">🏥 Choisir une offre dans MultiveRH</div>
         <button onclick="document.getElementById('fp-mv-modal').remove()" style="background:#f5f5f5;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;">✕</button>
       </div>
-      <input type="text" id="fp-mv-search" placeholder="🔎 Filtrer (titre, lieu, contrat...)" oninput="fp_filtrerOffres()" style="width:100%;padding:8px 12px;margin-bottom:10px;border:1px solid var(--border);border-radius:6px;">
-      <div id="fp-mv-list" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;">
-        <div style="text-align:center;padding:30px;color:var(--muted);"><span class="spinner">⏳</span> Chargement des offres MultiveRH…</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <input type="text" id="fp-mv-metier"  placeholder="💼 Métier (ex: infirmier)" style="${inp}">
+        <input type="text" id="fp-mv-client"  placeholder="🏢 Client (nom société)" style="${inp}">
+        <input type="text" id="fp-mv-secteur" placeholder="🏷️ Secteur d'activité (ex: Santé)" style="${inp}">
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="fp-mv-loc" placeholder="📍 Ville / CP" style="${inp}flex:1;">
+          <select id="fp-mv-radius" style="${inp}width:auto;background:#fff;color:var(--navy);">
+            <option value="0">Partout</option>
+            <option value="10">10 km</option>
+            <option value="20">20 km</option>
+            <option value="30" selected>30 km</option>
+            <option value="50">50 km</option>
+            <option value="100">100 km</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="fp_rechercherOffres()">🔍 Rechercher</button>
+      </div>
+      <div id="fp-mv-list" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;min-height:200px;">
+        <div style="text-align:center;padding:30px;color:var(--muted);">Renseigne des critères puis clique « Rechercher » — ou laisse vide pour les dernières offres.</div>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+  ['fp-mv-metier','fp-mv-client','fp-mv-secteur','fp-mv-loc'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') fp_rechercherOffres(); });
+  });
+  document.getElementById('fp-mv-metier').focus();
+  // Pas de recherche automatique : on attend que l'utilisateur saisisse ses critères.
+}
 
-  // Récupère les offres depuis MultiveRH (auth SSO HMAC, CORS-safe)
+async function fp_rechercherOffres() {
+  const list = document.getElementById('fp-mv-list');
+  if (!list) return;
+  list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Recherche…</div>`;
+  const params = {
+    metier: (document.getElementById('fp-mv-metier').value || '').trim(),
+    client: (document.getElementById('fp-mv-client').value || '').trim(),
+    secteur: (document.getElementById('fp-mv-secteur').value || '').trim(),
+    location: (document.getElementById('fp-mv-loc').value || '').trim(),
+    radius_km: document.getElementById('fp-mv-radius').value || '0',
+    limit: 100,
+  };
   try {
-    const data = await lbsAdminFetch('/admin/api/job-offers-list', { limit: 200 });
+    const data = await lbsAdminFetch('/admin/api/offers-search', params);
     window.__fpMvOffers = data.offers || [];
     fp_afficherOffres(window.__fpMvOffers);
   } catch (e) {
-    document.getElementById('fp-mv-list').innerHTML = `<div style="padding:20px;color:#c00;">❌ Impossible de charger les offres : ${e.message}<br><br>Recharge la page MultiveRH (la session SSO a peut-être expiré).</div>`;
+    list.innerHTML = `<div style="padding:20px;color:#c00;">❌ ${e.message}<br><br>Recharge la page MultiveRH (la session SSO a peut-être expiré).</div>`;
   }
 }
 
@@ -2005,11 +2780,13 @@ function fp_afficherOffres(offers) {
     html += `<div onclick="fp_choisirOffre(${o.id})" style="border-bottom:1px solid #eee;padding:10px 12px;cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background=''">
       <div style="font-weight:700;color:var(--navy);">${safe(o.title)}</div>
       <div style="font-size:12px;color:var(--muted);margin-top:2px;">
-        ${o.contract ? `<span style="background:#fff5ed;color:#d04a13;padding:1px 6px;border-radius:3px;margin-right:5px;">${safe(o.contract)}</span>` : ''}
+        ${o.client ? `<span style="background:#eef2f0;color:#2a6b59;padding:1px 6px;border-radius:3px;margin-right:5px;font-weight:600;">🏢 ${safe(o.client)}</span>` : ''}
+        ${o.secteur ? `<span style="background:#f0eefc;color:#5b4ba8;padding:1px 6px;border-radius:3px;margin-right:5px;">🏷️ ${safe(o.secteur)}</span>` : ''}
         ${o.location ? `📍 ${safe(o.location)} ` : ''}
-        ${o.created_at ? `· ${o.created_at.slice(0,10)}` : ''}
+        ${(o.distance_km !== null && o.distance_km !== undefined) ? `· <span style="color:#58A693;font-weight:600;">${o.distance_km} km</span> ` : ''}
+        ${o.created_at ? `· ${String(o.created_at).slice(0,10)}` : ''}
       </div>
-      ${o.description ? `<div style="font-size:11px;color:#666;margin-top:4px;line-height:1.4;">${safe(o.description).slice(0, 200)}…</div>` : ''}
+      ${o.description ? `<div style="font-size:11px;color:#666;margin-top:4px;line-height:1.4;">${safe(o.description).slice(0, 180)}…</div>` : ''}
     </div>`;
   }
   list.innerHTML = html;
@@ -2169,6 +2946,7 @@ async function rechercherHelloWork() {
             ${renderResultsSlideshow(hwCands, 'hw-slide')}
           `;
           initSlideshowFromDOM('hw-slide', hwCands);
+          renderAbsorbed();
         } else if (d.status === 'failed') {
           clearInterval(hwPollInterval); hwPollInterval = null;
           statusDiv.style.background = '#fef2f2';
@@ -2202,7 +2980,9 @@ let ftPollInterval = null;
 async function rechercherFranceTravail() {
   if (!fpParsed) return;
   try {
-    const res = await apiFetch('/francetravail/search', {
+    // File la tâche dans la queue France Travail — exécutée automatiquement par ton agent local Mac.
+    // Plus de prompt, plus de copier-coller, plus d'extension.
+    const res = await apiFetch('/francetravail/agent-search', {
       method: 'POST',
       body: JSON.stringify({
         criteres: {
@@ -2215,33 +2995,42 @@ async function rechercherFranceTravail() {
         },
       }),
     });
-    const { sessionId, prompt } = await res.json();
+    const { taskId } = await res.json();
 
-    document.getElementById('hw-modal').querySelector('h2').textContent = '🇫🇷 Recherche France Travail via Claude';
-    document.getElementById('hw-prompt-text').value = prompt;
-    document.getElementById('hw-status').textContent = '⏳ En attente des résultats…';
-    document.getElementById('hw-modal').classList.remove('hidden');
+    const srcDiv = document.getElementById('fp-sources');
+    srcDiv.classList.remove('hidden');
+    let statusDiv = document.getElementById('ft-status');
+    if (!statusDiv) {
+      statusDiv = document.createElement('div');
+      statusDiv.id = 'ft-status';
+      statusDiv.className = 'alert';
+      statusDiv.style.cssText = 'margin:8px 0;padding:8px 14px;background:#e6efff;border:1px solid #4d7ed1;color:#0747a6;';
+      srcDiv.appendChild(statusDiv);
+    }
+    statusDiv.innerHTML = '⏳ Recherche France Travail en cours via ton agent Mac…';
 
     if (ftPollInterval) clearInterval(ftPollInterval);
     ftPollInterval = setInterval(async () => {
       try {
-        const r = await apiFetch(`/francetravail/results/${sessionId}`);
+        const r = await apiFetch(`/francetravail/agent-status/${taskId}`);
         const d = await r.json();
-        document.getElementById('hw-status').textContent = `⏳ ${d.count} candidat(s) reçus — en attente…`;
         if (d.status === 'completed') {
-          clearInterval(ftPollInterval);
-          ftPollInterval = null;
-          closeHwModal();
-          const ftCands = d.candidats.map(c => ({ ...c, score: Math.floor(80 + Math.random() * 18) }));
+          clearInterval(ftPollInterval); ftPollInterval = null;
+          const ftCands = (d.candidats || []).map(c => ({ ...c, score: Math.floor(80 + Math.random() * 18) }));
           STATE.candidates = [...STATE.candidates, ...ftCands.filter(n => !STATE.candidates.find(e => e.id === n.id))];
-          const srcDiv = document.getElementById('fp-sources');
-          srcDiv.classList.remove('hidden');
-          srcDiv.innerHTML += `<div class="alert" style="margin:8px 0 0;padding:8px 14px;background:#e6efff;border:1px solid #4d7ed1;color:#0747a6;">🇫🇷 France Travail — ${ftCands.length} candidat(s)</div>`;
+          statusDiv.innerHTML = `🇫🇷 France Travail — ${ftCands.length} candidat(s)`;
           document.getElementById('fp-results').innerHTML += `
             <div style="font-weight:800;font-size:15px;margin:18px 0 12px;">🇫🇷 France Travail — ${ftCands.length} candidat(s)</div>
             ${renderResultsSlideshow(ftCands, 'ft-slide')}
           `;
           initSlideshowFromDOM('ft-slide', ftCands);
+          renderAbsorbed();
+        } else if (d.status === 'failed') {
+          clearInterval(ftPollInterval); ftPollInterval = null;
+          statusDiv.style.background = '#fef2f2';
+          statusDiv.style.borderColor = '#fecaca';
+          statusDiv.style.color = '#991b1b';
+          statusDiv.innerHTML = `❌ Erreur France Travail : ${d.error || 'inconnue'}`;
         }
       } catch {}
     }, 3000);
@@ -2254,7 +3043,9 @@ let apecPollInterval = null;
 async function rechercherApec() {
   if (!fpParsed) return;
   try {
-    const res = await apiFetch('/apec/search', {
+    // File la tâche dans la queue APEC — exécutée automatiquement par ton agent local Mac.
+    // Plus de prompt, plus de copier-coller, plus d'extension.
+    const res = await apiFetch('/apec/agent-search', {
       method: 'POST',
       body: JSON.stringify({
         criteres: {
@@ -2267,33 +3058,43 @@ async function rechercherApec() {
         },
       }),
     });
-    const { sessionId, prompt } = await res.json();
+    const { taskId } = await res.json();
 
-    document.getElementById('hw-modal').querySelector('h2').textContent = '🟦 Recherche APEC via Claude';
-    document.getElementById('hw-prompt-text').value = prompt;
-    document.getElementById('hw-status').textContent = '⏳ En attente des résultats…';
-    document.getElementById('hw-modal').classList.remove('hidden');
+    // Bannière de statut (comme HelloWork/Buddi)
+    const srcDiv = document.getElementById('fp-sources');
+    srcDiv.classList.remove('hidden');
+    let statusDiv = document.getElementById('apec-status');
+    if (!statusDiv) {
+      statusDiv = document.createElement('div');
+      statusDiv.id = 'apec-status';
+      statusDiv.className = 'alert';
+      statusDiv.style.cssText = 'margin:8px 0;padding:8px 14px;background:#e6edf7;border:1px solid #5b7fb7;color:#0E3A77;';
+      srcDiv.appendChild(statusDiv);
+    }
+    statusDiv.innerHTML = '⏳ Recherche APEC en cours via ton agent Mac…';
 
     if (apecPollInterval) clearInterval(apecPollInterval);
     apecPollInterval = setInterval(async () => {
       try {
-        const r = await apiFetch(`/apec/results/${sessionId}`);
+        const r = await apiFetch(`/apec/agent-status/${taskId}`);
         const d = await r.json();
-        document.getElementById('hw-status').textContent = `⏳ ${d.count} candidat(s) reçus — en attente…`;
         if (d.status === 'completed') {
-          clearInterval(apecPollInterval);
-          apecPollInterval = null;
-          closeHwModal();
-          const apecCands = d.candidats.map(c => ({ ...c, score: Math.floor(80 + Math.random() * 18) }));
+          clearInterval(apecPollInterval); apecPollInterval = null;
+          const apecCands = (d.candidats || []).map(c => ({ ...c, score: Math.floor(80 + Math.random() * 18) }));
           STATE.candidates = [...STATE.candidates, ...apecCands.filter(n => !STATE.candidates.find(e => e.id === n.id))];
-          const srcDiv = document.getElementById('fp-sources');
-          srcDiv.classList.remove('hidden');
-          srcDiv.innerHTML += `<div class="alert" style="margin:8px 0 0;padding:8px 14px;background:#e6edf7;border:1px solid #5b7fb7;color:#0E3A77;">🟦 APEC — ${apecCands.length} candidat(s)</div>`;
+          statusDiv.innerHTML = `🟦 APEC — ${apecCands.length} candidat(s)`;
           document.getElementById('fp-results').innerHTML += `
             <div style="font-weight:800;font-size:15px;margin:18px 0 12px;">🟦 APEC — ${apecCands.length} candidat(s)</div>
             ${renderResultsSlideshow(apecCands, 'apec-slide')}
           `;
           initSlideshowFromDOM('apec-slide', apecCands);
+          renderAbsorbed();
+        } else if (d.status === 'failed') {
+          clearInterval(apecPollInterval); apecPollInterval = null;
+          statusDiv.style.background = '#fef2f2';
+          statusDiv.style.borderColor = '#fecaca';
+          statusDiv.style.color = '#991b1b';
+          statusDiv.innerHTML = `❌ Erreur APEC : ${d.error || 'inconnue'}`;
         }
       } catch {}
     }, 3000);
@@ -2648,6 +3449,49 @@ function renderCandidates() {
 }
 
 // ── Mode diaporama : liste candidats à gauche + fiche complète à droite + flèches
+// Métadonnées d'affichage par source (logo + libellé + couleur)
+const SOURCE_META = {
+  'apec':          { logo: '🟦', label: 'APEC',          color: '#0E3A77' },
+  'france-travail':{ logo: '🇫🇷', label: 'France Travail', color: '#0747a6' },
+  'buddi':         { logo: '🌐', label: 'HelloWork',     color: '#FF5A1F' },
+  'hellowork':     { logo: '🌐', label: 'HelloWork',     color: '#FF5A1F' },
+};
+function sourceBadge(source) {
+  const m = SOURCE_META[source] || { logo: '📄', label: source || 'Autre', color: '#666' };
+  return `<span style="display:inline-flex;align-items:center;gap:5px;font-weight:700;font-size:12px;padding:2px 8px;border-radius:999px;background:${m.color}14;color:${m.color};border:1px solid ${m.color}55;">${m.logo} ${m.label}</span>`;
+}
+
+// Liste "CV absorbés" : tous les candidats importés dans MultiveRH, avec le logo de leur source.
+function renderAbsorbed() {
+  const box = document.getElementById('fp-absorbed');
+  if (!box) return;
+  const imported = (STATE.candidates || []).filter(c => c.imported);
+  if (!imported.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  box.classList.remove('hidden');
+  const rows = imported.map(c => {
+    const name = (c.nom || c.first_name || c.metier || 'Candidat').toString().replace(/\s+/g, ' ').trim();
+    const lien = c.candidateUrl ? `<a href="${c.candidateUrl}" target="_blank" style="color:#FF5A1F;font-weight:600;">Ouvrir la fiche ↗</a>` : '';
+    return `<tr style="border-bottom:1px solid #eee;">
+      <td style="padding:8px 10px;">${sourceBadge(c.source)}</td>
+      <td style="padding:8px 10px;font-weight:600;">${name}</td>
+      <td style="padding:8px 10px;color:#555;">${(c.metier || '').toString().slice(0, 50)}</td>
+      <td style="padding:8px 10px;color:#777;">${c.ville || ''}</td>
+      <td style="padding:8px 10px;">${lien}</td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `
+    <div style="margin:14px 0;border:1px solid #e3e3e3;border-radius:12px;overflow:hidden;">
+      <div style="padding:10px 14px;background:#0E3A77;color:#fff;font-weight:800;">📥 CV absorbés dans MultiveRH — ${imported.length}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;">
+        <thead><tr style="background:#f6f7f9;color:#666;text-align:left;">
+          <th style="padding:8px 10px;">Source</th><th style="padding:8px 10px;">Candidat</th>
+          <th style="padding:8px 10px;">Métier</th><th style="padding:8px 10px;">Ville</th><th style="padding:8px 10px;">Fiche</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
 function renderResultsSlideshow(candidates, idPrefix) {
   if (!candidates || !candidates.length) return '';
   const prefix = idPrefix || 'slideshow';
